@@ -15,9 +15,9 @@ no
 # n
 # ...
 
-no i like cheese
-# i like cheese
-# i like cheese
+no i hate mustard
+# i hate mustard
+# i hate mustard
 # ...
 ```
 ### Install & Uninstall (FreeBSD)
