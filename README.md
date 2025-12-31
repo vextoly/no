@@ -56,7 +56,7 @@ chmod +x install.sh
 * Installs the command to `/usr/local/bin/no`
 * Works immediately without additional configuration
 
-To remove `no`, run the same script with the `remove` option (also as root):
+To remove `no`, run the same script with the `remove` option **(also as root)**:
 
 ```sh
 ./install.sh remove
