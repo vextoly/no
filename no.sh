@@ -20,7 +20,7 @@ while [ $# -gt 0 ]; do
 done
 
 print_no() {
-    echo "no"
+    echo "n"
 }
 
 if [ "$times" -eq -1 ]; then
