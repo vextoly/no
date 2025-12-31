@@ -8,6 +8,8 @@ It behaves similarly to the Unix `yes` command, but:
 * Accepts custom arguments (words to repeat)
 * Supports `--times NUMBER` to limit repetitions (infinite by default)
 
+For practical examples and ways to use `no`, see the [Use Cases](usecases.md) page.
+
 ---
 
 ## Usage
