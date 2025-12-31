@@ -1,3 +1,5 @@
+[Back to home](https://github.com/ihatemustard/no)
+
 # Use Cases for `no`
 
 `no` is a modern, high-performance sequence generator and automation utility. While it begins as the logical opposite of the classic Unix `yes` command, its advanced features make it a lightweight alternative to complex loops in shell scripting.
