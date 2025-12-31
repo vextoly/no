@@ -103,10 +103,11 @@ sudo rm /usr/local/bin/no
 * `sh` (POSIX-compliant shell, usually `/bin/sh`)
 
 ## To-Do
-[X] Add Features from jot(1)
-[X] TUI Installer
-[X] Include help instead of using `man`
-[ ] Option to scan for new Versions
-[ ] Update Feature in Installer
-[X] Add Version Flag
-[X] Add Count
+- [X] Add Features from jot(1)
+- [X] TUI Installer
+- [X] Include help instead of using `man`
+- [ ] Option to scan for new Versions
+- [ ] Update Feature in Installer
+- [X] Add Version Flag
+- [X] Add Count Flag
+And more to come..
