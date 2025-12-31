@@ -1,6 +1,6 @@
 #!/bin/sh
 # Author: ihatemustard
-# Installer for the updated "no" command
+# Installer for the "no" command
 
 INSTALL_PATH="/usr/local/bin"
 MAN_PATH="/usr/local/share/man/man1"
@@ -15,7 +15,6 @@ case "$1" in
         echo "Removing 'no'..."
         rm -f "$INSTALL_PATH/no"
         rm -f "$MAN_PATH/no.1"
-        mandb
         echo "Removed."
         exit 0
         ;;
@@ -116,8 +115,6 @@ $ no --times 5
 .SH AUTHOR
 ihatemustard
 EOF
-
-mandb
 
 echo "Installation complete!"
 echo "Use 'no WORD --times NUMBER' or 'no WORD' to print infinitely."
