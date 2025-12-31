@@ -31,17 +31,17 @@ Installs to `/usr/local/bin/no`.
 *Note: This method of installation is untested.*
 1. [Download the `no` script](https://github.com/ihatemustard/no/blob/main/no.sh)
 2. Make it executable:
-`chmod +x no`
+`chmod +x no.sh`
 
 3. Move it to a directory in your PATH (requires root):
-`sudo mv no /usr/local/bin/no`
+`sudo mv no /usr/local/bin/no.sh`
 
 4. Test it:
 `no | head`
 `no i like cheese | head`
 
 To uninstall:
-`sudo rm /usr/local/bin/no`
+`sudo rm /usr/local/bin/no.sh`
 
 ### Dependencies
 - sh (POSIX-compliant shell, usually /bin/sh)
