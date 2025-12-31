@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Version Control
-CURRENT_VERSION="v2.1"
+CURRENT_VERSION="v2.0"
 INSTALLER_URL="https://raw.githubusercontent.com/ihatemustard/no/refs/heads/main/install.sh"
 GITHUB_PAGE="https://github.com/ihatemustard/no/blob/main/install.sh"
 
