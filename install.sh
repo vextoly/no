@@ -15,7 +15,6 @@ case "$1" in
         echo "Removing 'no'..."
         rm -f "$INSTALL_PATH/no"
         rm -f "$MAN_PATH/no.1"
-        mandb
         echo "Removed."
         exit 0
         ;;
