@@ -45,7 +45,7 @@ $ no --example string --example2 string2 output
 
 The table below compares the `no` script with other common Unix utilities that generate repeated or sequential output.  
 
-| Feature | no | yes | jot | seq | shuf |
+| Feature | no v1.3 | yes | jot | seq | shuf |
 |---------|----|-----|-----|-----|------|
 | Infinite repetition | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Repetition count | ✅ | ❌ | ✅ | ✅ | ✅ |
