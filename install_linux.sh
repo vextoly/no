@@ -15,6 +15,17 @@ CYAN=$(printf '\033[0;36m')
 BOLD=$(printf '\033[1m')
 NC=$(printf '\033[0m')
 
+verify_os() {
+    OS_TYPE=$(uname -s)
+    if [ "$OS_TYPE" != "Linux" ]; then
+        printf "\033[0;31m[ERROR] This script is designed for Linux only.\033[0m\n"
+        printf "Detected OS: $OS_TYPE\n"
+        if [ "$OS_TYPE" = "FreeBSD" ]; then
+            printf "\033[1;33mPlease use the FreeBSD-specific version for your system.\033[0m\n"
+        fi
+        exit 1
+    fi
+}
 # ======================
 # UPDATE CHECK
 check_version() {
