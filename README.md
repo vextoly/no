@@ -21,11 +21,24 @@ no i like cheese
 # ...
 ```
 ### Install & Uninstall (FreeBSD)
-**Note**: You must run the install script as root.
+Step 1: Download the install script using fetch
 ```sh
-fetch -o - https://raw.githubusercontent.com/ihatemustard/no/refs/heads/main/install.sh | sh
+fetch -o install.sh https://raw.githubusercontent.com/ihatemustard/no/refs/heads/main/install.sh
+```
+Step 2: Make the script executable
+```sh
+chmod +x install.sh
+```
+Step 3: Run the script as root (using `doas` or `sudo`)
+```sh
+./install.sh
 ```
 Installs to `/usr/local/bin/no`.
+
+To remove no, run the same script with the remove option **(also as root)**:
+```sh
+./install.sh remove
+```
 
 ### Install & Uninstall (Linux & Others)
 *Note: This method of installation is untested.*
