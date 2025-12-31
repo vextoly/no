@@ -1,6 +1,19 @@
 #!/bin/sh
 
-VERSION="1.3"
+export LC_ALL=C
+
+VERSION="2.4-fix"
+
+OLD_STTY=$(stty -g)
+
+cleanup() {
+    stty "$OLD_STTY"
+    exit 130
+}
+
+trap cleanup INT TERM EXIT
+
+stty intr ^E
 
 TEXT="n"
 INTERVAL=0
@@ -9,143 +22,241 @@ USE_RANDOM=0
 RANDOM_ITEMS=""
 USE_COUNT=0
 OUTPUT=""
-COMMAND=""
 SEPARATOR="\n"
 COLUMNS=1
 FORMAT=""
-
 SEQ_ACTIVE=0
 SEQ_START=""
 SEQ_END=""
 STEP=""
 PAD=0
 PRECISION=-1
+PREFIX_STR=""
+SUFFIX_STR=""
+WIDTH=0
+CYCLE=0
+SKIP=0
 
 usage() {
-    echo "Usage: no [text] [options]"
-    echo
-    echo "Options:"
-    echo "  -i, --interval <sec>     Add a delay between outputs"
-    echo "  -v, --version            Show version info"
-    echo "  -h, --help               Show this help"
-    echo "  -r, --random <list>      Repeat random strings from comma-separated list"
-    echo "  -c, --count              Prepend counter to each output"
-    echo "  -o, --output <file>      Write output to a file instead of stdout"
-    echo "  -t, --times <n>          Number of times to repeat (0 = infinite)"
-    echo "  -f, --format <str>       Printf-style format (e.g., 'Value: %s')"
-    echo "  -s, --separator <str>    Custom separator between items (default: newline)"
-    echo "  -cols <n>                Display output in N columns"
-    echo "  -cmd, --command <cmd>    Execute a shell command repeatedly"
-    echo "  --seq <start:end>        Generate a sequence (1:5, 5:1, or a:z)"
-    echo "  --step <n>               Increment for sequence (auto-detects negative)"
-    echo "  --pad <n>                Zero-pad numbers (e.g., --pad 3 -> 001)"
-    echo "  --precision <n>          Decimal places for numbers"
+    cat <<EOF
+Usage: no [text] [options]
+
+Core Options:
+  -t, --times <n>      Stop after N outputs (0=infinite)
+  -i, --interval <sec> Sleep between outputs
+  -o, --output <file>  Write to file
+  -r, --random <list>  Pick random item from comma-sep list
+  -v, --version        Show version
+  --dry-run            Show configuration and exit
+
+Kill Switch:
+  CTRL + E             Instantly kills the process and returns to shell.
+
+Formatting:
+  -f, --format <str>    Printf-style format (e.g., "ID-%s")
+  -s, --separator <str> Character(s) between items (default: \n)
+  -cols <n>             Output in N columns (uses tabs)
+  -c, --count           Prepend line counter (1: , 2: , etc.)
+  --prefix <str>        Add string before each output
+  --suffix <str>        Add string after each output
+  --width <n>           Right-align output to fixed width
+
+Sequences:
+  --seq <start:end>    Generate sequence (1:100, a:z, -5:5)
+  --step <n>            Sequence increment size
+  --cycle               Repeat sequence infinitely (requires -t)
+  --skip <n>            Skip first N items of sequence
+  --pad <n>             Zero-pad numbers (e.g., 001, 002)
+  --precision <n>       Decimal places for floats
+  --verify              Run internal self-tests
+EOF
     exit 0
 }
 
-pick_random() {
-    LIST="$1"
-    COUNT=$(echo "$LIST" | awk -F',' '{print NF}')
-    RAND_BYTE=$(od -An -N2 -tu2 /dev/urandom | tr -d ' ')
-    INDEX=$(( (RAND_BYTE % COUNT) + 1 ))
-    echo "$LIST" | awk -v i="$INDEX" -F',' '{print $i}'
+verify_script() {
+    printf -- "Starting extended verification suite...\n"
+    GREEN='\033[0;32m'; RED='\033[0;31m'; NC='\033[0m'
+    case "$0" in /*|./*) script_path="$0" ;; *) script_path="./$0" ;; esac
+
+    FAILED_TESTS=0
+    TOTAL_TESTS=0
+
+    test_case() {
+        TOTAL_TESTS=$((TOTAL_TESTS + 1))
+        NAME="$1"; CMD="$2"; EXPECTED=$(printf -- "$3")
+        RESULT=$(eval "$script_path $CMD" 2>/dev/null)
+
+        if [ "$RESULT" = "$EXPECTED" ]; then
+            printf -- "${GREEN}[PASS]${NC} %s\n" "$NAME"
+        else
+            printf -- "${RED}[FAIL]${NC} %s\n" "$NAME"
+            printf -- "    Expected: [%s] (Len: ${#EXPECTED})\n" "$3"
+            printf -- "    Got:      [%s] (Len: ${#RESULT})\n" "$RESULT"
+            FAILED_TESTS=$((FAILED_TESTS + 1))
+        fi
+    }
+
+    # Verification cases
+    test_case "Basic Repetition" "-t 2 'hi'" "hi\nhi\n"
+    test_case "Numeric Sequence" "--seq 1:3" "1\n2\n3\n"
+    test_case "Reverse Numeric" "--seq 3:1" "3\n2\n1\n"
+    test_case "Character Sequence" "--seq a:c" "a\nb\nc\n"
+    test_case "Prefix/Suffix" "-t 1 'x' --prefix 'A' --suffix 'B'" "AxB\n"
+    test_case "Cycle Sequence" "--seq 1:2 --cycle -t 4" "1\n2\n1\n2\n"
+    test_case "Skip Logic" "--seq 1:5 --skip 3" "4\n5\n"
+    test_case "Zero Padding" "--seq 9:11 --pad 3" "009\n010\n011\n"
+    test_case "Precision Floats" "--seq 1:1.5 --step 0.5 --prec 1" "1.0\n1.5\n"
+    test_case "Column Layout" "--seq 1:4 -cols 2" "1\t2\n3\t4\n"
+    test_case "Format String" "-t 1 -f 'Value is %s' 'test'" "Value is test\n"
+    test_case "Negative Sequence" "--seq -1:-3" "-1\n-2\n-3\n"
+    test_case "Cross Zero Seq" "--seq -1:1" "-1\n0\n1\n"
+    test_case "Large Step" "--seq 1:10 --step 5" "1\n6\n"
+    test_case "Step larger than range" "--seq 1:2 --step 5" "1\n"
+    test_case "Float Sequence Start" "--seq 0.5:1.5 --step 0.5" "0.5\n1\n1.5\n"
+    test_case "Reverse Float Seq" "--seq 1.0:0.0 --step -0.5" "1\n0.5\n0\n"
+    test_case "Char Seq Reverse" "--seq c:a" "c\nb\na\n"
+    test_case "Char Seq Uppercase" "--seq X:Z" "X\nY\nZ\n"
+    test_case "Fixed Width Align" "-t 1 'hi' --width 5" "   hi\n"
+    test_case "Width with Prefix" "-t 1 'x' --prefix '>' --width 3" " >x\n"
+    test_case "Padding on single num" "-t 1 '7' --pad 2" "07\n"
+    test_case "Hex Format" "-t 1 '255' -f '%x'" "ff\n"
+    test_case "Scientific Format" "-t 1 '1000' -f '%e'" "1.000000e+03\n"
+    test_case "Precision Rounding" "-t 1 '1.555' --prec 2" "1.56\n"
+    test_case "Format with literal %" "-t 1 '5' -f '%% %s %%'" "%% 5 %%"
+    test_case "Empty string width" "-t 1 '' --width 3" "   \n"
+    test_case "Custom Separator" "-t 2 'ok' -s ','" "ok,ok,"
+    test_case "Space Separator" "-t 2 'x' -s ' '" "x x "
+    test_case "Cols with 3 items" "--seq 1:3 -cols 3" "1\t2\t3\n"
+    test_case "Cols uneven" "--seq 1:5 -cols 2" "1\t2\n3\t4\n5\n"
+    test_case "Cols with cycle" "--seq 1:2 --cycle -t 4 -cols 2" "1\t2\n1\t2\n"
+    test_case "Tab Separator Literal" "-t 2 'a' -s '\t'" "a\ta"
+    test_case "Newline Separator" "-t 2 'a' -s '\n'" "a\na\n"
+    test_case "Cols with custom prefix" "--seq 1:2 --prefix '#' -cols 2" "#1\t#2\n"
+    test_case "Counter check" "-t 2 'hi' -c" "1: hi\n2: hi\n"
+    test_case "Counter with Sequence" "--seq 10:11 -c" "1: 10\n2: 11\n"
+    test_case "Prefix and Suffix" "-t 1 'mid' --prefix '[' --suffix ']'" "[mid]\n"
+    test_case "Multi-char prefix" "-t 1 'x' --prefix 'START_'" "START_x\n"
+    test_case "Counter with Prefix" "-t 1 'x' -c --prefix 'PRE'" "1: PREx\n"
+    test_case "Suffix only" "-t 1 'x' --suffix '...'" "x...\n"
+    test_case "Skip all items" "--seq 1:3 --skip 5" ""
+    test_case "Skip exactly all" "--seq 1:3 --skip 3" ""
+    test_case "Cycle and Skip" "--seq 1:3 --cycle --skip 1 -t 3" "2\n3\n1\n"
+    test_case "Cycle non-sequence" "-t 4 'hi' --cycle" "hi\nhi\nhi\nhi\n"
+    test_case "Skip on non-sequence" "-t 5 'a' --skip 2" "a\na\na\n"
+    test_case "Negative step sequence" "--seq 10:0 --step -5" "10\n5\n0\n"
+    test_case "Format + Padding" "--seq 1:1 --pad 3 -f 'ID-%s'" "ID-001\n"
+    test_case "Cols + Width" "--seq 1:2 -cols 2 --width 3" "  1\t  2\n"
+    test_case "Random from 1 item" "-r 'only' -t 1" "only\n"
+
+    printf -- "----------------------------------------------\n"
+    [ $FAILED_TESTS -eq 0 ] && printf "${GREEN}SUCCESS: All tests passed.${NC}\n" || printf "${RED}FAILURE: $FAILED_TESTS tests failed.${NC}\n"
+    exit $FAILED_TESTS
 }
 
-while [ "$#" -gt 0 ]; do
+while [ $# -gt 0 ]; do
     case "$1" in
-        -i|--interval) INTERVAL="$2"; shift 2 ;;
-        -v|--version) echo "no v$VERSION"; exit 0 ;;
-        -h|--help) usage ;;
-        -r|--random) USE_RANDOM=1; RANDOM_ITEMS="$2"; shift 2 ;;
-        -c|--count) USE_COUNT=1; shift ;;
-        -o|--output) OUTPUT="$2"; shift 2 ;;
-        -t|--times) TIMES="$2"; shift 2 ;;
-        -f|--format) FORMAT="$2"; shift 2 ;;
-        -s|--separator) SEPARATOR="$2"; shift 2 ;;
-        -cols) COLUMNS="$2"; shift 2 ;;
-        -cmd|--command) COMMAND="$2"; shift 2 ;;
-        --seq)
-            SEQ_ACTIVE=1
-            SEQ_START=$(echo "$2" | cut -d':' -f1)
-            SEQ_END=$(echo "$2" | cut -d':' -f2)
-            shift 2
-            ;;
-        --step) STEP="$2"; shift 2 ;;
-        --pad) PAD="$2"; shift 2 ;;
-        --precision|--prec) PRECISION="$2"; shift 2 ;;
-        *) TEXT="$1"; shift ;;
+        --verify)       verify_script ;;
+        -v|--version)   echo "no v$VERSION"; exit 0 ;;
+        -h|--help)      usage ;;
+        -r|--random)    USE_RANDOM=1; RANDOM_ITEMS="$2"; shift ;;
+        -c|--count)     USE_COUNT=1 ;;
+        -o|--output)    OUTPUT="$2"; shift ;;
+        -t|--times)     TIMES="$2"; shift ;;
+        -f|--format)    FORMAT="$2"; shift ;;
+        -s|--separator) SEPARATOR="$2"; shift ;;
+        -cols)          COLUMNS="$2"; shift ;;
+        -i|--interval)  INTERVAL="$2"; shift ;;
+        --prefix)       PREFIX_STR="$2"; shift ;;
+        --suffix)       SUFFIX_STR="$2"; shift ;;
+        --width)        WIDTH="$2"; shift ;;
+        --cycle)        CYCLE=1 ;;
+        --skip)         SKIP="$2"; shift ;;
+        --seq)          SEQ_ACTIVE=1; SEQ_START="${2%%:*}"; SEQ_END="${2#*:}"; shift ;;
+        --step)         STEP="$2"; shift ;;
+        --pad)          PAD="$2"; shift ;;
+        --precision|--prec) PRECISION="$2"; shift ;;
+        *)              TEXT="$1" ;;
     esac
+    shift
 done
 
-IS_CHAR_SEQ=0
+IS_CHAR_SEQ=0; START_VAL=0; END_VAL=0; SEQ_LEN=0; SHOULD_EXIT=0
 if [ "$SEQ_ACTIVE" -eq 1 ]; then
-    if echo "$SEQ_START" | grep -Eq '^[a-zA-Z]$'; then
-        IS_CHAR_SEQ=1
-        CURRENT_ASC=$(printf '%d' "'$SEQ_START")
-        END_ASC=$(printf '%d' "'$SEQ_END")
-        [ -z "$STEP" ] && { [ "$CURRENT_ASC" -le "$END_ASC" ] && STEP=1 || STEP=-1; }
-        [ "$TIMES" -eq 0 ] && TIMES=$(awk -v s="$CURRENT_ASC" -v e="$END_ASC" -v st="$STEP" 'BEGIN { t=(e-s)/st; printf "%d", (t<0?-t:t)+1 }')
-    else
-        CURRENT="$SEQ_START"
-        [ -z "$STEP" ] && { [ "$(awk -v s="$SEQ_START" -v e="$SEQ_END" 'BEGIN {print (e>=s)}')" -eq 1 ] && STEP=1 || STEP=-1; }
-        [ "$TIMES" -eq 0 ] && TIMES=$(awk -v s="$SEQ_START" -v e="$SEQ_END" -v st="$STEP" 'BEGIN { t=(e-s)/st; printf "%d", (t<0?-t:t)+1 }')
+    case "$SEQ_START" in
+        [a-zA-Z]) IS_CHAR_SEQ=1; START_VAL=$(printf -- '%d' "'$SEQ_START"); END_VAL=$(printf -- '%d' "'$SEQ_END") ;;
+        *) START_VAL="$SEQ_START"; END_VAL="$SEQ_END" ;;
+    esac
+    [ -z "$STEP" ] && STEP=$(awk -v s="$START_VAL" -v e="$END_VAL" 'BEGIN {print (e >= s ? 1 : -1)}')
+    SEQ_LEN=$(awk -v s="$START_VAL" -v e="$END_VAL" -v st="$STEP" 'BEGIN {
+        diff = (e - s);
+        if ((st > 0 && diff < 0) || (st < 0 && diff > 0)) { print 0; exit }
+        count = int(diff / st) + 1;
+        print (count < 0 ? 0 : count)
+    }')
+    if [ "$TIMES" -eq 0 ] && [ "$CYCLE" -eq 0 ]; then
+        TIMES=$((SEQ_LEN - SKIP)); [ "$TIMES" -le 0 ] && SHOULD_EXIT=1
+    fi
+else
+    if [ "$SKIP" -gt 0 ] && [ "$TIMES" -gt 0 ]; then
+        TIMES=$((TIMES - SKIP)); [ "$TIMES" -le 0 ] && SHOULD_EXIT=1
     fi
 fi
 
-i=0
-while [ "$TIMES" -eq 0 ] || [ "$i" -lt "$TIMES" ]; do
-    if [ -n "$COMMAND" ]; then
-        OUT=$(sh -c "$COMMAND")
-    elif [ "$USE_RANDOM" -eq 1 ]; then
-        OUT=$(pick_random "$RANDOM_ITEMS")
-    elif [ "$SEQ_ACTIVE" -eq 1 ]; then
-        if [ "$IS_CHAR_SEQ" -eq 1 ]; then
-            OUT=$(printf "\\$(printf '%03o' "$CURRENT_ASC")")
-            CURRENT_ASC=$(awk -v c="$CURRENT_ASC" -v s="$STEP" 'BEGIN { print c + s }')
-        else
-            OUT="$CURRENT"
-            CURRENT=$(awk -v c="$CURRENT" -v s="$STEP" 'BEGIN { print c + s }')
-        fi
-    else
-        OUT="$TEXT"
-    fi
+if [ "$SHOULD_EXIT" -eq 1 ]; then exit 0; fi
 
-    if [ -n "$FORMAT" ]; then
-        FINAL_OUT=$(printf "$FORMAT" "$OUT")
-    elif [ "$IS_CHAR_SEQ" -eq 0 ] && echo "$OUT" | grep -Eq '^[+-]?[0-9]*\.?[0-9]+$'; then
-        if [ "$PRECISION" -ge 0 ]; then
-            FINAL_OUT=$(awk -v n="$OUT" -v p="$PRECISION" -v w="$PAD" 'BEGIN { fmt="%.0" p "f"; if(w>0) fmt="%0" w "." p "f"; printf fmt, n }')
-        elif [ "$PAD" -gt 0 ]; then
-            FINAL_OUT=$(awk -v n="$OUT" -v w="$PAD" 'BEGIN { fmt="%0" w "d"; if(n ~ /\./) fmt="%0" w "f"; printf fmt, n }')
-        else
-            FINAL_OUT="$OUT"
-        fi
-    else
-        FINAL_OUT="$OUT"
-    fi
+awk -v text="$TEXT" -v limit="$TIMES" -v use_rand="$USE_RANDOM" \
+    -v r_list="$RANDOM_ITEMS" -v use_cnt="$USE_COUNT" -v cols="$COLUMNS" \
+    -v sep="$SEPARATOR" -v fmt="$FORMAT" -v s_act="$SEQ_ACTIVE" \
+    -v s_start="$START_VAL" -v s_step="$STEP" -v is_c="$IS_CHAR_SEQ" \
+    -v pad="$PAD" -v prec="$PRECISION" -v interval="$INTERVAL" \
+    -v pre="$PREFIX_STR" -v suf="$SUFFIX_STR" -v width="$WIDTH" \
+    -v cycle="$CYCLE" -v skip="$SKIP" -v seq_len="$SEQ_LEN" \
+'BEGIN {
+    if (sep == "\\n") sep = "\n"; if (sep == "\\t") sep = "\t";
+    if (use_rand) { srand(); r_n = split(r_list, r_arr, ","); }
 
-    PREFIX=""
-    [ "$USE_COUNT" -eq 1 ] && PREFIX="$((i+1)): "
+    do_num_fmt = (!is_c && (pad > 0 || prec >= 0));
+    if (do_num_fmt) f_num = "%" (pad > 0 ? "0" pad : "") (prec >= 0 ? "." prec : "") (prec >= 0 ? "f" : "d");
 
-    CONTENT="${PREFIX}${FINAL_OUT}"
+    i = 0;
+    while (limit == 0 || i < limit) {
+        if (use_rand) val = r_arr[int(rand() * r_n) + 1];
+        else if (s_act) {
+            idx = i + skip;
+            if (cycle && seq_len > 0) idx = idx % seq_len;
+            curr_v = s_start + (idx * s_step);
+            val = (is_c) ? sprintf("%c", curr_v) : curr_v;
+        } else val = text;
 
-    CURRENT_SEP="$SEPARATOR"
-    if [ "$COLUMNS" -gt 1 ]; then
-        if [ "$(( (i+1) % COLUMNS ))" -eq 0 ]; then
-            CURRENT_SEP="\n"
-        else
-            CURRENT_SEP="\t"
-        fi
-    fi
+        # Numeric rounding fix: add small epsilon to force half-up rounding
+        if (do_num_fmt) {
+            num_val = val + 0;
+            eps = (num_val >= 0) ? 0.0000000001 : -0.0000000001;
+            val = sprintf(f_num, num_val + eps);
+        }
 
-    if [ -n "$OUTPUT" ]; then
-        printf "%s%b" "$CONTENT" "$CURRENT_SEP" >> "$OUTPUT"
-    else
-        printf "%s%b" "$CONTENT" "$CURRENT_SEP"
-    fi
+        if (fmt != "") val = sprintf(fmt, val);
+        val = pre val suf;
+        if (width > 0) val = sprintf("%" width "s", val);
+        if (use_cnt) val = (i + 1) ": " val;
 
-    i=$((i+1))
-    [ "$(awk -v i="$INTERVAL" 'BEGIN { print (i > 0) }')" -eq 1 ] && sleep "$INTERVAL"
-done
+        if (cols > 1) {
+            printf "%s", val;
+            if ((i + 1) % cols == 0 || (limit > 0 && i + 1 == limit)) printf "\n";
+            else printf "\t";
+        } else {
+            printf "%s", val;
+            if (sep == "\n" || sep == "\t") {
+                if (limit == 0 || i + 1 < limit || sep == "\n") printf "%s", sep;
+            } else {
+                printf "%s", sep;
+            }
+        }
+        fflush("/dev/stdout");
 
-[ "$COLUMNS" -gt 1 ] && [ "$(( i % COLUMNS ))" -ne 0 ] && echo ""
+        if (interval > 0) {
+            if (system("sleep " interval) != 0) exit 130;
+        }
+        i++;
+    }
+}' > "${OUTPUT:-/dev/stdout}"
