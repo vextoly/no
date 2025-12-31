@@ -1,4 +1,4 @@
-[Back to home](https://github.com/ihatemustard/no)
+[Back to readme](https://github.com/ihatemustard/no)
 
 # Use Cases for `no`
 
