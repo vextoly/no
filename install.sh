@@ -1,39 +1,107 @@
 #!/bin/sh
+# Author: ihatemustard
+# Self-contained installer for the "no" command and its man page
 
-INSTALL_DIR="/usr/local/bin"
-TARGET="${INSTALL_DIR}/no"
+INSTALL_PATH="/usr/local/bin"
+MAN_PATH="/usr/local/share/man/man1"
 
-# Must run as root
 if [ "$(id -u)" -ne 0 ]; then
-    echo "Error: this script must be run as root (use su or doas)"
+    echo "You must run this as root!"
     exit 1
 fi
 
-# Determine action: install (default) or remove
-ACTION="$1"
+case "$1" in
+    remove)
+        echo "Removing 'no'..."
+        rm -f "$INSTALL_PATH/no"
+        rm -f "$MAN_PATH/no.1"
+        mandb
+        echo "Removed."
+        exit 0
+        ;;
+esac
 
-if [ "$ACTION" = "remove" ]; then
-    if [ -f "$TARGET" ]; then
-        rm -f "$TARGET"
-        echo "'no' removed from $TARGET"
-    else
-        echo "'no' is not installed"
-    fi
-    exit 0
-fi
-
-# Install 'no'
-echo "Installing 'no' to $TARGET..."
-mkdir -p "$INSTALL_DIR"
-
-cat > "$TARGET" << 'EOF'
+# Create the 'no' command
+echo "Creating 'no' command..."
+cat > "$INSTALL_PATH/no" << 'EOF'
 #!/bin/sh
-if [ "$#" -eq 0 ]; then
-    exec yes n
+# Author: ihatemustard
+# Simple "no" command with optional --times
+
+times=-1
+
+# Parse arguments
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --times)
+            shift
+            times="$1"
+            ;;
+        *)
+            echo "Usage: $0 [--times number]"
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+print_no() {
+    echo "no"
+}
+
+if [ "$times" -eq -1 ]; then
+    while true; do
+        print_no
+    done
 else
-    exec yes "$*"
+    i=0
+    while [ $i -lt "$times" ]; do
+        print_no
+        i=$((i + 1))
+    done
 fi
 EOF
 
-chmod 0755 "$TARGET"
-echo "Installed successfully! Test with: no | head"
+chmod +x "$INSTALL_PATH/no"
+
+# Create the man page
+echo "Creating man page..."
+mkdir -p "$MAN_PATH"
+cat > "$MAN_PATH/no.1" << 'EOF'
+.\" Manpage for no
+.TH NO 1 "2025-12-31" "1.0" "no command"
+.SH NAME
+no \- print "no" repeatedly
+.SH SYNOPSIS
+.B no
+[\-\-times NUMBER]
+.SH DESCRIPTION
+The
+.B no
+command prints the word "no".
+
+If
+.B --times NUMBER
+is given, it prints "no" NUMBER times. If not, it prints infinitely.
+
+.SH EXAMPLES
+Print "no" 5 times:
+
+.nf
+$ no --times 5
+.fi
+
+Print "no" infinitely:
+
+.nf
+$ no
+.fi
+
+.SH AUTHOR
+ihatemustard
+EOF
+
+mandb
+
+echo "Installation complete!"
+echo "Use 'no --times NUMBER' or 'no' to print infinitely."
