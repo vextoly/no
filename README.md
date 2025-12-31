@@ -74,7 +74,7 @@ To remove `no`, run the same script with the `remove` option (also as root):
 
 *Note: This method of installation is untested.*
 
-**Step 1**: [Download the `no` script](https://github.com/ihatemustard/no/blob/main/no.sh)
+**Step 1**: Download the [`no` script](https://github.com/ihatemustard/no/blob/main/no.sh)
 
 **Step 2**: Make it executable
 
