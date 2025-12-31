@@ -10,6 +10,7 @@ It behaves similarly to the Unix `yes` command, but:
 * Supports `--count` or `-c` to prepend a counter
 * Supports `--output` or `-o` to write output to a file
 * Supports `--random` or `-r` to repeat random strings from a comma-separated list
+* Supports `--command` or `-cmd` to repeatedly execute a shell command and print its output
 * Supports `--version` or `-v` and `--help` or `-h`
 
 For practical examples and ways to use `no`, see the [Use Cases](usecases.md) page.
