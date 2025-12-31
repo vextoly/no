@@ -104,6 +104,7 @@ sudo rm /usr/local/bin/no
 ## Dependencies
 
 * `sh` (POSIX-compliant shell, usually `/bin/sh`)
+* `awk`, `printf`, `od` (for random logic)
 
 ## To-Do
 - [X] Add Features from jot(1)
