@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VERSION="1.0"
+VERSION="1.1"
 
 TEXT="n"
 INTERVAL=0
@@ -9,6 +9,7 @@ USE_RANDOM=0
 RANDOM_ITEMS=""
 USE_COUNT=0
 OUTPUT=""
+COMMAND=""
 
 usage() {
     echo "Usage: no [text] [options]"
@@ -21,6 +22,7 @@ usage() {
     echo "  -c, --count                Prepend counter to each output"
     echo "  -o, --output <file>        Write output to a file instead of stdout"
     echo "  -t, --times <n>            Number of times to repeat (0 = infinite)"
+    echo "  -cmd, --command <cmd>      Execute a shell command repeatedly and print its output"
     echo
     echo "Examples:"
     echo "  no"
@@ -28,7 +30,7 @@ usage() {
     echo "  no --interval 0.5 --times 5"
     echo "  no --random \"no,nah,nop\" --times 4"
     echo "  no --count --times 3"
-    echo "  no --output log.txt --times 5"
+    echo "  no --command \"date\" --times 3 --interval 1"
     exit 0
 }
 
@@ -70,6 +72,10 @@ while [ "$#" -gt 0 ]; do
             TIMES="$2"
             shift 2
             ;;
+        -cmd|--command)
+            COMMAND="$2"
+            shift 2
+            ;;
         *)
             TEXT="$1"
             shift
@@ -79,7 +85,9 @@ done
 
 i=0
 while [ "$TIMES" -eq 0 ] || [ "$i" -lt "$TIMES" ]; do
-    if [ "$USE_RANDOM" -eq 1 ] && [ -n "$RANDOM_ITEMS" ]; then
+    if [ -n "$COMMAND" ]; then
+        OUT=$(sh -c "$COMMAND")
+    elif [ "$USE_RANDOM" -eq 1 ] && [ -n "$RANDOM_ITEMS" ]; then
         OUT=$(pick_random "$RANDOM_ITEMS")
     else
         OUT="$TEXT"
