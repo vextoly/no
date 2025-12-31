@@ -15,6 +15,8 @@ CYAN=$(printf '\033[0;36m')
 BOLD=$(printf '\033[1m')
 NC=$(printf '\033[0m')
 
+# ======================
+# TO BYPASS THE UPDATE CHECK (NOT RECOMMENDED), DELETE EVERYTHING FROM HERE
 check_version() {
     REMOTE_VERSION=$(fetch -o - "$INSTALLER_URL" 2>/dev/null | sed -n '2p' | cut -d'"' -f2 | tr -d '\r')
 
@@ -51,6 +53,8 @@ check_version() {
 }
 
 check_version
+# TO HERE
+# ======================
 
 print_banner() {
     clear
