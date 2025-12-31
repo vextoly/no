@@ -100,7 +100,5 @@ $ no
 ihatemustard
 EOF
 
-mandb
-
 echo "Installation complete!"
 echo "Use 'no --times NUMBER' or 'no' to print infinitely."
