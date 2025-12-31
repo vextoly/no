@@ -5,7 +5,6 @@ GITHUB_URL="https://raw.githubusercontent.com/ihatemustard/no/refs/heads/main/no
 INSTALL_DIR="/usr/local/bin"
 TARGET="${INSTALL_DIR}/no"
 
-# ANSI Colors - Initialized via printf for BSD compatibility
 RED=$(printf '\033[0;31m')
 GREEN=$(printf '\033[0;32m')
 YELLOW=$(printf '\033[1;33m')
@@ -14,7 +13,6 @@ CYAN=$(printf '\033[0;36m')
 BOLD=$(printf '\033[1m')
 NC=$(printf '\033[0m')
 
-# --- Helper Functions ---
 
 print_banner() {
     clear
@@ -39,21 +37,18 @@ print_error() {
 }
 
 check_env() {
-    # FreeBSD-only check
     if [ "$(uname)" != "FreeBSD" ]; then
         print_error "This script is optimized for FreeBSD only."
         exit 1
     fi
 
-    # Root check
     if [ "$(id -u)" -ne 0 ]; then
         print_error "Root privileges required."
-        printf "       Use ${BOLD}su${NC} or ${BOLD}sudo${NC} to run this installer.\n"
+        printf "       Use ${BOLD}su${NC} or ${BOLD}doas${NC} to run this installer.\n"
         exit 1
     fi
 }
 
-# --- Main Logic ---
 
 install_no() {
     check_env
@@ -66,7 +61,6 @@ install_no() {
 
     print_status "Fetching 'no' from GitHub using fetch(1)..."
 
-    # Using FreeBSD native fetch
     fetch -o "$TARGET" "$GITHUB_URL"
 
     if [ $? -ne 0 ] || [ ! -s "$TARGET" ]; then
@@ -90,7 +84,6 @@ remove_no() {
     fi
 }
 
-# --- Menu Loop ---
 
 while true; do
     print_banner
