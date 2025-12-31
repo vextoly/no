@@ -20,12 +20,12 @@ check_version() {
 
     if [ -n "$REMOTE_VERSION" ] && [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
         clear
-        printf "${RED}╔════════════════════════════════════════════════════════════╗${NC}\n"
-        printf "${RED}║                NEW VERSION AVAILABLE                       ║${NC}\n"
-        printf "${RED}╚════════════════════════════════════════════════════════════╝${NC}\n"
+        printf "${RED}╔═══════════════════════╗${NC}\n"
+        printf "${RED}║ NEW VERSION AVAILABLE ║${NC}\n"
+        printf "${RED}╚═══════════════════════╝${NC}\n"
         printf " Local version:  ${YELLOW}$LOCAL_VERSION${NC}\n"
         printf " Remote version: ${GREEN}$REMOTE_VERSION${NC}\n\n"
-        
+
         printf " ${BOLD}1)${NC} Open New Version (Browser)\n"
         printf " ${BOLD}2)${NC} Exit\n\n"
         printf "${CYAN}Please select an option [1-2]:${NC} "
