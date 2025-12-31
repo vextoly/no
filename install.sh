@@ -4,7 +4,7 @@ INSTALL_DIR="/usr/local/bin"
 TARGET="${INSTALL_DIR}/no"
 
 clear
-echo "=== no v1.2 installer ==="
+echo "=== no v1.2 installer by ihatemustard ==="
 echo
 echo "1) Install no"
 echo "2) Remove no"
