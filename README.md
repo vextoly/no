@@ -22,6 +22,6 @@ no i like cheese
 ```
 ### Install & Uninstall (FreeBSD)
 ```sh
-fetch -o - https://raw.githubusercontent.com/ihatemustard/no/main/install.sh | sh
+fetch -o - https://raw.githubusercontent.com/ihatemustard/no/refs/heads/main/install.sh | sh
 ```
 Installs to `/usr/local/bin/no`.
