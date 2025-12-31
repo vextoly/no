@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# Version Control
+CURRENT_VERSION="v2.1"
+INSTALLER_URL="https://raw.githubusercontent.com/ihatemustard/no/refs/heads/main/install.sh"
+GITHUB_PAGE="https://github.com/ihatemustard/no/blob/main/install.sh"
+
 # Configuration
 GITHUB_URL="https://raw.githubusercontent.com/ihatemustard/no/refs/heads/main/no.sh"
 INSTALL_DIR="/usr/local/bin"
@@ -13,16 +18,59 @@ CYAN=$(printf '\033[0;36m')
 BOLD=$(printf '\033[1m')
 NC=$(printf '\033[0m')
 
+check_version() {
+    # Fetch second line of remote script
+    REMOTE_VERSION=$(fetch -o - "$INSTALLER_URL" 2>/dev/null | sed -n '2p' | tr -d '\r')
+
+    # If remote version doesn't match local version
+    if [ "$REMOTE_VERSION" != "$CURRENT_VERSION" ] && [ -n "$REMOTE_VERSION" ]; then
+        clear
+        printf "${RED}╔════════════════════════════════════════════════════════════╗${NC}\n"
+        printf "${RED}║                NEW VERSION AVAILABLE                       ║${NC}\n"
+        printf "${RED}╚════════════════════════════════════════════════════════════╝${NC}\n"
+        printf " Local version:  ${YELLOW}$CURRENT_VERSION${NC}\n"
+        printf " Remote version: ${GREEN}$REMOTE_VERSION${NC}\n\n"
+
+        printf " ${BOLD}1)${NC} Open New Version (Browser)\n"
+        printf " ${BOLD}2)${NC} Exit\n\n"
+        printf "${CYAN}Please select an option [1-2]:${NC} "
+        read ver_choice
+
+        case "$ver_choice" in
+            1)
+                # Attempts to open URL in browser (FreeBSD/Linux/macOS compatible)
+                if command -v open >/dev/null 2>&1; then
+                    open "$GITHUB_PAGE"
+                elif command -v xdg-open >/dev/null 2>&1; then
+                    xdg-open "$GITHUB_PAGE"
+                else
+                    printf "\n${YELLOW}Could not detect a browser. Please visit:${NC}\n$GITHUB_PAGE\n"
+                    sleep 5
+                fi
+                exit 0
+                ;;
+            *)
+                printf "${YELLOW}Exiting.${NC}\n"
+                exit 0
+                ;;
+        esac
+    fi
+}
+
+# Run version check
+check_version
 
 print_banner() {
     clear
     printf "${CYAN}"
     printf " ╔═══════════════════════════╗\n"
-    printf " ║     no-installer v2.0     ║\n"
+    printf " ║     no-installer $CURRENT_VERSION     ║\n"
     printf " ║     by ihatemustard       ║\n"
     printf " ╚═══════════════════════════╝\n"
     printf "${NC}\n"
 }
+
+# ... [The rest of your existing functions: print_status, install_no, etc.]
 
 print_status() {
     printf "${BLUE}[INFO]${NC} %s\n" "$1"
@@ -49,29 +97,22 @@ check_env() {
     fi
 }
 
-
 install_no() {
     check_env
-
     echo
     if [ ! -d "$INSTALL_DIR" ]; then
         print_status "Creating $INSTALL_DIR..."
         mkdir -p "$INSTALL_DIR"
     fi
-
     print_status "Fetching 'no' from GitHub using fetch(1)..."
-
     fetch -o "$TARGET" "$GITHUB_URL"
-
     if [ $? -ne 0 ] || [ ! -s "$TARGET" ]; then
         print_error "Download failed. Check your internet connection."
         rm -f "$TARGET"
         return 1
     fi
-
     chmod 0755 "$TARGET"
     print_success "Successfully installed to $TARGET"
-    printf "       Test it by typing: ${BOLD}no --version${NC}\n"
 }
 
 remove_no() {
@@ -83,7 +124,6 @@ remove_no() {
         print_error "'no' not found in $INSTALL_DIR"
     fi
 }
-
 
 while true; do
     print_banner
