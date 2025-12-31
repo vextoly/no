@@ -1,11 +1,8 @@
 #!/bin/sh
-
-# Version Control
-CURRENT_VERSION="v2.0"
+LOCAL_VERSION="v2.0"
 INSTALLER_URL="https://raw.githubusercontent.com/ihatemustard/no/refs/heads/main/install.sh"
 GITHUB_PAGE="https://github.com/ihatemustard/no/blob/main/install.sh"
 
-# Configuration
 GITHUB_URL="https://raw.githubusercontent.com/ihatemustard/no/refs/heads/main/no.sh"
 INSTALL_DIR="/usr/local/bin"
 TARGET="${INSTALL_DIR}/no"
@@ -19,15 +16,18 @@ BOLD=$(printf '\033[1m')
 NC=$(printf '\033[0m')
 
 check_version() {
-    # This grabs the first 10 lines and looks for the line starting with CURRENT_VERSION=
-    REMOTE_VERSION=$(fetch -o - "$INSTALLER_URL" 2>/dev/null | grep "^CURRENT_VERSION=" | head -n 1 | cut -d'"' -f2)
+    REMOTE_VERSION=$(fetch -o - "$INSTALLER_URL" 2>/dev/null | sed -n '2p' | cut -d'"' -f2 | tr -d '\r')
 
-    if [ -n "$REMOTE_VERSION" ] && [ "$REMOTE_VERSION" != "$CURRENT_VERSION" ]; then
+    if [ -z "$REMOTE_VERSION" ]; then
+        return
+    fi
+
+    if [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
         clear
         printf "${RED}╔════════════════════════════════════════════════════════════╗${NC}\n"
         printf "${RED}║                NEW VERSION AVAILABLE                       ║${NC}\n"
         printf "${RED}╚════════════════════════════════════════════════════════════╝${NC}\n"
-        printf " Local version:  ${YELLOW}$CURRENT_VERSION${NC}\n"
+        printf " Local version:  ${YELLOW}$LOCAL_VERSION${NC}\n"
         printf " Remote version: ${GREEN}$REMOTE_VERSION${NC}\n\n"
         
         printf " ${BOLD}1)${NC} Open New Version (Browser)\n"
@@ -37,10 +37,12 @@ check_version() {
 
         case "$ver_choice" in
             1)
-                if command -v open >/dev/null 2>&1; then open "$GITHUB_PAGE"
-                elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$GITHUB_PAGE"
+                if command -v open >/dev/null 2>&1; then
+                    open "$GITHUB_PAGE"
+                elif command -v xdg-open >/dev/null 2>&1; then
+                    xdg-open "$GITHUB_PAGE"
                 else
-                    printf "\n${YELLOW}Please visit:${NC}\n$GITHUB_PAGE\n"
+                    printf "\n${YELLOW}Could not open browser. Please visit:${NC}\n$GITHUB_PAGE\n"
                     sleep 5
                 fi
                 exit 0
@@ -52,42 +54,29 @@ check_version() {
     fi
 }
 
-# Run version check
 check_version
 
 print_banner() {
     clear
     printf "${CYAN}"
     printf " ╔═══════════════════════════╗\n"
-    printf " ║     no-installer $CURRENT_VERSION     ║\n"
+    printf " ║     no-installer %s     ║\n" "$LOCAL_VERSION"
     printf " ║     by ihatemustard       ║\n"
     printf " ╚═══════════════════════════╝\n"
     printf "${NC}\n"
 }
 
-# ... [The rest of your existing functions: print_status, install_no, etc.]
-
-print_status() {
-    printf "${BLUE}[INFO]${NC} %s\n" "$1"
-}
-
-print_success() {
-    printf "${GREEN}[OK]${NC} %s\n" "$1"
-}
-
-print_error() {
-    printf "${RED}[ERROR]${NC} %s\n" "$1"
-}
+print_status() { printf "${BLUE}[INFO]${NC} %s\n" "$1"; }
+print_success() { printf "${GREEN}[OK]${NC} %s\n" "$1"; }
+print_error() { printf "${RED}[ERROR]${NC} %s\n" "$1"; }
 
 check_env() {
     if [ "$(uname)" != "FreeBSD" ]; then
         print_error "This script is optimized for FreeBSD only."
         exit 1
     fi
-
     if [ "$(id -u)" -ne 0 ]; then
         print_error "Root privileges required."
-        printf "       Use ${BOLD}su${NC} or ${BOLD}doas${NC} to run this installer.\n"
         exit 1
     fi
 }
@@ -95,19 +84,15 @@ check_env() {
 install_no() {
     check_env
     echo
-    if [ ! -d "$INSTALL_DIR" ]; then
-        print_status "Creating $INSTALL_DIR..."
-        mkdir -p "$INSTALL_DIR"
-    fi
-    print_status "Fetching 'no' from GitHub using fetch(1)..."
+    [ ! -d "$INSTALL_DIR" ] && mkdir -p "$INSTALL_DIR"
+    print_status "Downloading 'no'..."
     fetch -o "$TARGET" "$GITHUB_URL"
-    if [ $? -ne 0 ] || [ ! -s "$TARGET" ]; then
-        print_error "Download failed. Check your internet connection."
-        rm -f "$TARGET"
-        return 1
+    if [ $? -eq 0 ] && [ -s "$TARGET" ]; then
+        chmod 0755 "$TARGET"
+        print_success "Installed to $TARGET"
+    else
+        print_error "Download failed."
     fi
-    chmod 0755 "$TARGET"
-    print_success "Successfully installed to $TARGET"
 }
 
 remove_no() {
@@ -116,7 +101,7 @@ remove_no() {
         rm "$TARGET"
         print_success "Removed $TARGET"
     else
-        print_error "'no' not found in $INSTALL_DIR"
+        print_error "Not found."
     fi
 }
 
@@ -126,27 +111,14 @@ while true; do
     printf " ${BOLD}2)${NC} Uninstall 'no'\n"
     printf " ${BOLD}3)${NC} Exit\n"
     echo
-    printf "${CYAN}Select an option [1-3]:${NC} "
+    printf "${CYAN}Select [1-3]:${NC} "
     read choice
-
     case "$choice" in
-        1)
-            install_no
-            printf "\nPress Enter to return to menu..."
-            read ignore
-            ;;
-        2)
-            remove_no
-            printf "\nPress Enter to return to menu..."
-            read ignore
-            ;;
-        3)
-            printf "${YELLOW}Exiting.${NC}\n"
-            exit 0
-            ;;
-        *)
-            print_error "Invalid selection."
-            sleep 1
-            ;;
+        1) install_no ;;
+        2) remove_no ;;
+        3) exit 0 ;;
+        *) print_error "Invalid selection" ;;
     esac
+    printf "\nPress Enter..."
+    read ignore
 done
