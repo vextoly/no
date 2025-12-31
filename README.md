@@ -110,4 +110,3 @@ sudo rm /usr/local/bin/no
 - [ ] Update Feature in Installer
 - [X] Add Version Flag
 - [X] Add Count Flag
-And more to come..
