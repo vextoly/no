@@ -95,8 +95,6 @@ To remove `no`, run the same script **(also as root)**.
 
 ## Install & Uninstall (Linux & Unix-like systems)
 
-*Note: This method of installation is untested.*
-
 **Step 1**: Download the [`no`](https://github.com/ihatemustard/no/blob/main/no.sh) script
 
 **Step 2**: Make it executable
