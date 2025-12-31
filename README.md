@@ -28,6 +28,9 @@ n
 $ no i hate mustard
 i hate mustard
 i hate mustard
+
+# You can pass (multiple) arguments
+$ no --example string --example2 string2 output
 ...
 ```
 
