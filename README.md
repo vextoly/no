@@ -1,5 +1,3 @@
-**Update 1.4 for `no` has been delayed to January 1st, 2026** due to major issues discovered during development that prevented a stable release. The current version remains fully functional, and this delay ensures that Update 1.4 will be stable, polished, and free of critical problems. You can still find the broken version of Release 1.4 [here](https://github.com/ihatemustard/no/releases/tag/1.4) if you would like a preview. **Note that some commands may not work in this release.**
-
 # no
 
 `no` is the opposite of `yes`.
