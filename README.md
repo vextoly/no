@@ -15,7 +15,13 @@ no
 # n
 # ...
 
-no absolutely not
-# absolutely not
-# absolutely not
+no i like cheese
+# i like cheese
+# i like cheese
 # ...
+```
+### Install (FreeBSD)
+```sh
+fetch -o - https://raw.githubusercontent.com/ihatemustard/no/main/install.sh | sh
+```
+Installs to `/usr/local/bin/no`.
