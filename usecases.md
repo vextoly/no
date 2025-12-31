@@ -1,116 +1,128 @@
 # Use Cases for `no`
 
-## 1. Automating Negative Responses
+`no` is a flexible automation and testing tool. While it looks simple, it is useful in many real-world and playful scenarios.
 
-Use `no` to automatically respond to prompts in scripts, installers, or command-line programs that require confirmation.
+---
 
-```sh
-# Simulate always saying no
+## 1. Default Negative Input Replacement
+
+The most basic use: replacing `yes` with a negative response.
+
+Example:
 no
-n
-n
+
+Output:
 n
 n
 n
 ...
-```
 
-```sh
-# Say 'no' with a delay between each response
-no --interval 0.5 --times 3
-n
-(wait 0.5s)
-n
-(wait 0.5s)
-n
-```
+Why:
+Some scripts or programs expect repeated input. `no` provides a fast, explicit way to send negative responses.
 
 ---
 
-## 2. Custom Text Repetition
+## 2. Custom Repeated Text
 
-You can print custom negative responses instead of the default `n`.
+no "I disagree"
 
-```sh
-no i hate mustard --times 3
-# Output:
-i hate mustard
-i hate mustard
-i hate mustard
-```
+Use case:
+Testing programs that read from stdin, stress-testing input handling, or scripting repetitive output.
 
 ---
 
-## 3. Counting Outputs
+## 3. Limiting Output with --times / -t
 
-Prepend a counter to each output to track repetitions.
+no --times 3
 
-```sh
-no --count --times 5
-# Output:
+Use case:
+Prevent infinite output when piping into commands like head, sed, or logs.
+
+---
+
+## 4. Timed Input with --interval / -i
+
+no --interval 0.5 --times 5
+
+Use case:
+Simulating human-like delays for scripts that expect pauses between inputs.
+
+---
+
+## 5. Logging Output with --output / -o
+
+no example -o output.txt --times 5
+
+Use case:
+Writing automated responses to files without shell redirection.
+
+---
+
+## 6. Counting Output with --count / -c
+
+no --count --times 3
+
+Output:
 1: n
 2: n
 3: n
-4: n
-5: n
-```
+
+Use case:
+Debugging, logging, or tracking how many responses were sent.
 
 ---
 
-## 4. Writing to Files
+## 7. Randomized Responses with --random / -r
 
-Redirect output directly to a file without using shell redirection.
-
-```sh
-no example --output log.txt --times 3
-# Writes the following to log.txt:
-example
-example
-example
-```
-
----
-
-## 5. Random Responses
-
-Repeat random strings from a list to simulate variability.
-
-```sh
 no --random "no,nah,nop,never" --times 4
-# Possible output:
-no
-nop
-nah
-never
-```
+
+Use case:
+Testing scripts that should handle varying input instead of a fixed value.
 
 ---
 
-## 6. Script Testing
+## 8. Executing Commands Repeatedly (--command / -cmd)
 
-Use `no` to test scripts or programs that expect repeated negative input. Combined with `--interval` and `--times`, it can simulate realistic user input.
+no --command "date" --times 3
 
-```sh
-no --interval 1 --random "no,nah,nop" --times 5
-```
+Why this exists:
+Sometimes you want dynamic output, not static text.
 
----
+Practical reasons:
+- Poll system state (uptime, who, df -h)
+- Generate changing data for pipelines
+- Replace simple watch-style loops
+- Feed live command output into another program
 
-## 7. Quick Demo or Fun
-
-Use `no` for fun, rhetorical responses, or demonstrations.
-
-```sh
-no absolutely-not --times 10
-```
+Example with delay:
+no --command "uptime" --interval 1
 
 ---
 
-## Notes
+## 9. Combining Features
 
-* Combine any of the flags for flexible behavior.
-* The `--help` flag shows all options and examples directly in the terminal:
+no --command "echo no" --count --interval 0.2 --times 5
 
-```sh
-no --help
-```
+Use case:
+Demonstrates that no is composable and predictable.
+
+---
+
+## 10. Automation & Testing Tool
+
+Because no:
+- Is POSIX sh
+- Has no dependencies
+- Works in pipes
+- Can run infinitely or finitely
+
+It is ideal for CI testing, script mocking, input fuzzing, and terminal demos.
+
+---
+
+## Philosophy
+
+no is intentionally simple.
+
+If yes is optimism,
+no is realism.
