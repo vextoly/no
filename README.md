@@ -15,22 +15,22 @@ For practical examples and ways to use `no`, see the [Use Cases](usecases.md) pa
 ## Usage
 
 ```sh
-# no
+$ no
 n
 n
 n
 ...
 
-# no i hate mustard
+$ no i hate mustard
 i hate mustard
 i hate mustard
 ...
 
-# no i hate mustard --times 2
+$ no i hate mustard --times 2
 i hate mustard
 i hate mustard
 
-# no --times 5
+$ no --times 5
 n
 n
 n
