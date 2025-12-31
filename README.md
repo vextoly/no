@@ -1,3 +1,5 @@
+**Update 1.4 for `no` has been delayed to January 1st, 2026** due to major issues discovered during development that prevented a stable release. The current version remains fully functional, and this delay ensures that Update 1.4 will be stable, polished, and free of critical problems.
+
 # no
 
 `no` is the opposite of `yes`.
