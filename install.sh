@@ -22,7 +22,7 @@ case "$1" in
 esac
 
 # Create the 'no' command
-echo "Creating 'no' command..."
+echo "Installing 'no'..."
 cat > "$INSTALL_PATH/no" << 'EOF'
 #!/bin/sh
 # Author: ihatemustard
@@ -46,7 +46,7 @@ while [ $# -gt 0 ]; do
 done
 
 print_no() {
-    echo "no"
+    echo "n"
 }
 
 if [ "$times" -eq -1 ]; then
@@ -78,7 +78,7 @@ no \- print "no" repeatedly
 .SH DESCRIPTION
 The
 .B no
-command prints the word "no".
+command prints "n".
 
 If
 .B --times NUMBER
