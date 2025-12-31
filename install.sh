@@ -1,8 +1,8 @@
 #!/bin/sh
 LOCAL_VERSION="v2.1"
+
 INSTALLER_URL="https://raw.githubusercontent.com/ihatemustard/no/refs/heads/main/install.sh"
 GITHUB_PAGE="https://github.com/ihatemustard/no/blob/main/install.sh"
-
 GITHUB_URL="https://raw.githubusercontent.com/ihatemustard/no/refs/heads/main/no.sh"
 INSTALL_DIR="/usr/local/bin"
 TARGET="${INSTALL_DIR}/no"
@@ -18,11 +18,7 @@ NC=$(printf '\033[0m')
 check_version() {
     REMOTE_VERSION=$(fetch -o - "$INSTALLER_URL" 2>/dev/null | sed -n '2p' | cut -d'"' -f2 | tr -d '\r')
 
-    if [ -z "$REMOTE_VERSION" ]; then
-        return
-    fi
-
-    if [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
+    if [ -n "$REMOTE_VERSION" ] && [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
         clear
         printf "${RED}╔════════════════════════════════════════════════════════════╗${NC}\n"
         printf "${RED}║                NEW VERSION AVAILABLE                       ║${NC}\n"
@@ -42,7 +38,7 @@ check_version() {
                 elif command -v xdg-open >/dev/null 2>&1; then
                     xdg-open "$GITHUB_PAGE"
                 else
-                    printf "\n${YELLOW}Could not open browser. Please visit:${NC}\n$GITHUB_PAGE\n"
+                    printf "\n${YELLOW}Visit:${NC} $GITHUB_PAGE\n"
                     sleep 5
                 fi
                 exit 0
