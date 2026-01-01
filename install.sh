@@ -1,12 +1,17 @@
 #!/bin/sh
-LOCAL_VERSION="v2.1"
+LOCAL_VERSION="v2.2"
 
+# URLs
 INSTALLER_URL="https://raw.githubusercontent.com/ihatemustard/no/refs/heads/main/install.sh"
 GITHUB_PAGE="https://github.com/ihatemustard/no/blob/main/install.sh"
 GITHUB_URL="https://raw.githubusercontent.com/ihatemustard/no/refs/heads/main/no.sh"
+MINIMAL_URL="https://raw.githubusercontent.com/ihatemustard/no/84fadfe65e85aa04b81723047dde77a4455eb5a9/no.sh"
+
+# Paths
 INSTALL_DIR="/usr/local/bin"
 TARGET="${INSTALL_DIR}/no"
 
+# Colors
 RED=$(printf '\033[0;31m')
 GREEN=$(printf '\033[0;32m')
 YELLOW=$(printf '\033[1;33m')
@@ -60,8 +65,8 @@ print_banner() {
     clear
     printf "${CYAN}"
     printf " ╔═══════════════════════════╗\n"
-    printf " ║     no-installer %s     ║\n" "$LOCAL_VERSION"
-    printf " ║     by ihatemustard       ║\n"
+    printf " ║      no-installer %s      ║\n" "$LOCAL_VERSION"
+    printf " ║      by ihatemustard      ║\n"
     printf " ╚═══════════════════════════╝\n"
     printf "${NC}\n"
 }
@@ -85,11 +90,26 @@ install_no() {
     check_env
     echo
     [ ! -d "$INSTALL_DIR" ] && mkdir -p "$INSTALL_DIR"
-    print_status "Downloading 'no'..."
+    print_status "Downloading 'no' (Standard)..."
     fetch -o "$TARGET" "$GITHUB_URL"
     if [ $? -eq 0 ] && [ -s "$TARGET" ]; then
         chmod 0755 "$TARGET"
-        print_success "Installed to $TARGET"
+        print_success "Installed standard version to $TARGET"
+    else
+        print_error "Download failed."
+    fi
+}
+
+install_minimal() {
+    check_env
+    echo
+    printf "${YELLOW}[WARNING] Installing Minimal version (Not Recommended)${NC}\n"
+    [ ! -d "$INSTALL_DIR" ] && mkdir -p "$INSTALL_DIR"
+    print_status "Downloading 'no' (Minimal)..."
+    fetch -o "$TARGET" "$MINIMAL_URL"
+    if [ $? -eq 0 ] && [ -s "$TARGET" ]; then
+        chmod 0755 "$TARGET"
+        print_success "Installed minimal version to $TARGET"
     else
         print_error "Download failed."
     fi
@@ -107,16 +127,18 @@ remove_no() {
 
 while true; do
     print_banner
-    printf " ${BOLD}1)${NC} Install / Update 'no'\n"
-    printf " ${BOLD}2)${NC} Uninstall 'no'\n"
-    printf " ${BOLD}3)${NC} Exit\n"
+    printf " ${BOLD}1)${NC} Install / Update 'no' (Standard)\n"
+    printf " ${BOLD}2)${NC} Install minimal 'no' ${RED}(Not recommended)${NC}\n"
+    printf " ${BOLD}3)${NC} Uninstall 'no'\n"
+    printf " ${BOLD}4)${NC} Exit\n"
     echo
-    printf "${CYAN}Select [1-3]:${NC} "
+    printf "${CYAN}Select [1-4]:${NC} "
     read choice
     case "$choice" in
         1) install_no ;;
-        2) remove_no ;;
-        3) exit 0 ;;
+        2) install_minimal ;;
+        3) remove_no ;;
+        4) exit 0 ;;
         *) print_error "Invalid selection" ;;
     esac
     printf "\nPress Enter..."
