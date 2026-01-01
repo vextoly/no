@@ -65,7 +65,7 @@ print_banner() {
     clear
     printf "${CYAN}"
     printf " ╔═══════════════════════════╗\n"
-    printf " ║      no-installer %s      ║\n" "$LOCAL_VERSION"
+    printf " ║      no-installer %s    ║\n" "$LOCAL_VERSION"
     printf " ║      by ihatemustard      ║\n"
     printf " ╚═══════════════════════════╝\n"
     printf "${NC}\n"
