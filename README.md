@@ -123,7 +123,9 @@ sudo rm /usr/local/bin/no
 ```
 
 **Install no minimal (Not recommended)**
+
 **Step 1**: Download the [`no minimal`]([https://github.com/ihatemustard/no/blob/main/no.sh](https://github.com/ihatemustard/no/blob/84fadfe65e85aa04b81723047dde77a4455eb5a9/no.sh) script
+
 **Step 2**: Complete all the steps listed above.
 
 ---
