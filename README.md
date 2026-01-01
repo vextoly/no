@@ -1,8 +1,3 @@
-## Known Bugs in v4.1-fix
-- `--command` or `-cmd` flag won't work
-- `--separator` or `-s`flag won't work
-Will probably fix those **January 1st 2026**.
-
 # no
 
 `no` is the opposite of `yes`.
@@ -141,7 +136,7 @@ sudo rm /usr/local/bin/no
 - [X] Install through Wi-Fi and not locally in Installer
 - [X] Add Version Flag
 - [X] Add Count Flag
-- [ ] Fix `--command` and `--seperator` flags
+- [X] Fix `--command` and `--seperator` flags
 - [ ] Make parsing of flags better
 
 [![FreeBSD Powered Button](https://www.freebsd.org/gifs/power-button.gif)](https://www.freebsd.org)
