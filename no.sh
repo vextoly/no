@@ -47,7 +47,7 @@ Core Options:
   -i, --interval <sec> Sleep between outputs
   -o, --output <file>  Write to file
   -r, --random <list>  Pick random item from comma-sep list
-  -cmd, --command <str> Run shell command and output result
+  -cmd, --command <q>  Execute shell command (captures all output)
   -v, --version        Show version
 
 Kill Switch:
@@ -75,7 +75,7 @@ EOF
 }
 
 verify_script() {
-    printf -- "Starting verification suite...\n"
+    printf -- "Starting verification suite for v$VERSION...\n"
     GREEN='\033[0;32m'; RED='\033[0;31m'; NC='\033[0m'
     case "$0" in /*|./*) script_path="$0" ;; *) script_path="./$0" ;; esac
 
@@ -91,13 +91,12 @@ verify_script() {
             printf -- "${GREEN}[PASS]${NC} %s\n" "$NAME"
         else
             printf -- "${RED}[FAIL]${NC} %s\n" "$NAME"
-            printf -- "    Expected: [%s] (Len: ${#EXPECTED})\n" "$3"
-            printf -- "    Got:      [%s] (Len: ${#RESULT})\n" "$RESULT"
+            printf -- "    Expected: [%s]\n" "$3"
+            printf -- "    Got:      [%s]\n" "$RESULT"
             FAILED_TESTS=$((FAILED_TESTS + 1))
         fi
     }
 
-    # Verification cases
     test_case "Basic Repetition" "-t 2 'hi'" "hi\nhi\n"
     test_case "Numeric Sequence" "--seq 1:3" "1\n2\n3\n"
     test_case "Reverse Numeric" "--seq 3:1" "3\n2\n1\n"
@@ -155,12 +154,18 @@ verify_script() {
     exit $FAILED_TESTS
 }
 
-# Helper to safely shift arguments
-safe_shift() {
-    if [ $# -lt 2 ]; then
-        echo "Error: Flag $1 requires an argument."
+# Helper: Ensure flags have required arguments
+# Allows negative numbers (integers/floats) but rejects flags starting with -
+check_arg() {
+    if [ -z "$2" ]; then
+        echo "Error: Argument for $1 is missing."
         exit 1
     fi
+    # Check if argument starts with '-' but is NOT a number (e.g. another flag)
+    case "$2" in
+        -[0-9]*) ;; # Allow negative numbers
+        -*) echo "Error: Argument for $1 cannot be a flag ($2)."; exit 1 ;;
+    esac
 }
 
 while [ $# -gt 0 ]; do
@@ -168,24 +173,24 @@ while [ $# -gt 0 ]; do
         --verify)       verify_script ;;
         -v|--version)   echo "no v$VERSION"; exit 0 ;;
         -h|--help)      usage ;;
-        -cmd|--command) safe_shift "$1" "$2"; COMMAND_STR="$2"; shift ;;
-        -r|--random)    safe_shift "$1" "$2"; USE_RANDOM=1; RANDOM_ITEMS="$2"; shift ;;
+        -cmd|--command) check_arg "$1" "$2"; COMMAND_STR="$2"; shift ;;
+        -r|--random)    check_arg "$1" "$2"; USE_RANDOM=1; RANDOM_ITEMS="$2"; shift ;;
         -c|--count)     USE_COUNT=1 ;;
-        -o|--output)    safe_shift "$1" "$2"; OUTPUT="$2"; shift ;;
-        -t|--times)     safe_shift "$1" "$2"; TIMES="$2"; shift ;;
-        -f|--format)    safe_shift "$1" "$2"; FORMAT="$2"; shift ;;
-        -s|--separator) safe_shift "$1" "$2"; SEPARATOR="$2"; shift ;;
-        -cols)          safe_shift "$1" "$2"; COLUMNS="$2"; shift ;;
-        -i|--interval)  safe_shift "$1" "$2"; INTERVAL="$2"; shift ;;
-        --prefix)       safe_shift "$1" "$2"; PREFIX_STR="$2"; shift ;;
-        --suffix)       safe_shift "$1" "$2"; SUFFIX_STR="$2"; shift ;;
-        --width)        safe_shift "$1" "$2"; WIDTH="$2"; shift ;;
+        -o|--output)    check_arg "$1" "$2"; OUTPUT="$2"; shift ;;
+        -t|--times)     check_arg "$1" "$2"; TIMES="$2"; shift ;;
+        -f|--format)    check_arg "$1" "$2"; FORMAT="$2"; shift ;;
+        -s|--separator) check_arg "$1" "$2"; SEPARATOR="$2"; shift ;;
+        -cols)          check_arg "$1" "$2"; COLUMNS="$2"; shift ;;
+        -i|--interval)  check_arg "$1" "$2"; INTERVAL="$2"; shift ;;
+        --prefix)       check_arg "$1" "$2"; PREFIX_STR="$2"; shift ;;
+        --suffix)       check_arg "$1" "$2"; SUFFIX_STR="$2"; shift ;;
+        --width)        check_arg "$1" "$2"; WIDTH="$2"; shift ;;
         --cycle)        CYCLE=1 ;;
-        --skip)         safe_shift "$1" "$2"; SKIP="$2"; shift ;;
-        --seq)          safe_shift "$1" "$2"; SEQ_ACTIVE=1; SEQ_START="${2%%:*}"; SEQ_END="${2#*:}"; shift ;;
-        --step)         safe_shift "$1" "$2"; STEP="$2"; shift ;;
-        --pad)          safe_shift "$1" "$2"; PAD="$2"; shift ;;
-        --precision|--prec) safe_shift "$1" "$2"; PRECISION="$2"; shift ;;
+        --skip)         check_arg "$1" "$2"; SKIP="$2"; shift ;;
+        --seq)          check_arg "$1" "$2"; SEQ_ACTIVE=1; SEQ_START="${2%%:*}"; SEQ_END="${2#*:}"; shift ;;
+        --step)         check_arg "$1" "$2"; STEP="$2"; shift ;;
+        --pad)          check_arg "$1" "$2"; PAD="$2"; shift ;;
+        --precision|--prec) check_arg "$1" "$2"; PRECISION="$2"; shift ;;
         *)              TEXT="$1" ;;
     esac
     shift
@@ -232,25 +237,24 @@ awk -v text="$TEXT" -v limit="$TIMES" -v use_rand="$USE_RANDOM" \
 
     i = 0;
     while (limit == 0 || i < limit) {
-        if (use_rand) {
+        if (cmd_str != "") {
+             val = "";
+             # Loop through all lines of command output
+             while ((cmd_str | getline line) > 0) {
+                 val = (val == "" ? "" : val "\n") line;
+             }
+             close(cmd_str);
+        } else if (use_rand) {
             val = r_arr[int(rand() * r_n) + 1];
         } else if (s_act) {
             idx = i + skip;
             if (cycle && seq_len > 0) idx = idx % seq_len;
             curr_v = s_start + (idx * s_step);
             val = (is_c) ? sprintf("%c", curr_v) : curr_v;
-        } else if (cmd_str != "") {
-             if ((cmd_str | getline line) > 0) {
-                 val = line;
-                 close(cmd_str); # Close to force re-execution next loop
-             } else {
-                 val = ""; # Command failed or empty
-             }
         } else {
             val = text;
         }
 
-        # Numeric rounding fix
         if (do_num_fmt && cmd_str == "" && !use_rand) {
             num_val = val + 0;
             eps = (num_val >= 0) ? 0.0000000001 : -0.0000000001;
