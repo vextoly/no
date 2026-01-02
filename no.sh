@@ -2,7 +2,7 @@
 
 export LC_ALL=C
 
-VERSION="1.5"
+VERSION="1.6"
 
 OLD_STTY=$(stty -g)
 
@@ -21,7 +21,7 @@ TIMES=0
 USE_RANDOM=0
 RANDOM_ITEMS=""
 USE_COUNT=0
-OUTPUT=""
+OUTPUTS=""
 SEPARATOR="\n"
 COLUMNS=1
 FORMAT=""
@@ -39,8 +39,11 @@ SKIP=0
 COMMAND_STR=""
 JITTER=0
 CASE_MODE=""
-COLOR=""
+STYLE=""
 HEADER=""
+FILTER_REGEX=""
+CALC_EXPR=""
+TEMPLATE_FILE=""
 
 usage() {
     cat <<EOF
@@ -50,11 +53,16 @@ Core Options:
   -t, --times <n>      Stop after N outputs (0=infinite)
   -i, --interval <sec> Sleep between outputs
   -j, --jitter <sec>   Add random 0-N sec delay to interval
-  -o, --output <file>  Write to file
+  -o, --output <file>  Write to file (can be used multiple times)
   -r, --random <list>  Pick random item from comma-separated list
   -cmd, --command <q>  Execute shell command (captures all output)
   -v, --version        Show version
   -h, --help           Show this help message
+
+Processing & Logic:
+  --filter <regex>     Only output items matching regex
+  --calc <op>          Perform arithmetic on numbers (e.g., '+5', '*2', '/2')
+  --template <file>    Use file content as input template
 
 Formatting:
   -f, --format <str>   Printf-style format (e.g., "ID-%s")
@@ -62,7 +70,7 @@ Formatting:
   -cols <n>            Output in N columns (uses tabs)
   -c, --count          Prepend line counter (1: , 2: , etc.)
   --case <mode>        Transform text: 'upper', 'lower', or 'swap'
-  --color <name>       Colorize: red, green, blue, yellow, cyan, magenta
+  --style <opts>       Style: bold, underline, italic, hex:#RRGGBB, or color name
   --header <str>       Print a line once before starting
   --prefix <str>       Add string before each output
   --suffix <str>       Add string after each output
@@ -89,6 +97,10 @@ verify_script() {
     case "$0" in /*|./*) script_path="$0" ;; *) script_path="./$0" ;; esac
     FAILED_TESTS=0
     TOTAL_TESTS=0
+
+    TMP_TPL="no_test_tpl.$$.txt"
+    printf "Line1\nLine2" > "$TMP_TPL"
+
     test_case() {
         TOTAL_TESTS=$((TOTAL_TESTS + 1))
         NAME="$1"; CMD="$2"; EXPECTED=$(printf -- "$3")
@@ -102,7 +114,8 @@ verify_script() {
             FAILED_TESTS=$((FAILED_TESTS + 1))
         fi
     }
-test_case "Basic Repetition" "-t 2 'hi'" "hi\nhi\n"
+
+    test_case "Basic Repetition" "-t 2 'hi'" "hi\nhi\n"
     test_case "Numeric Sequence" "--seq 1:3" "1\n2\n3\n"
     test_case "Reverse Numeric" "--seq 3:1" "3\n2\n1\n"
     test_case "Character Sequence" "--seq a:c" "a\nb\nc\n"
@@ -159,6 +172,27 @@ test_case "Basic Repetition" "-t 2 'hi'" "hi\nhi\n"
     test_case "Case Lower" "-t 1 'HI' --case lower" "hi\n"
     test_case "Header" "-t 1 'row' --header 'ID,Name'" "ID,Name\nrow\n"
     test_case "Color" "-t 1 'err' --color red" "\033[31merr\033[0m\n"
+    test_case "Filter Basic" "--seq 1:5 --filter '3'" "3\n"
+    test_case "Filter Regex" "--seq 10:20 --filter '1[5-6]'" "15\n16\n"
+    test_case "Filter Empty Result" "--seq 1:5 --filter '9'" ""
+    test_case "Calc Add" "-t 1 '10' --calc '+5'" "15\n"
+    test_case "Calc Subtract" "-t 1 '10' --calc '-5'" "5\n"
+    test_case "Calc Multiply" "-t 1 '10' --calc '*2'" "20\n"
+    test_case "Calc Divide" "-t 1 '10' --calc '/2'" "5\n"
+    test_case "Calc Sequence" "--seq 1:3 --calc '*10'" "10\n20\n30\n"
+    test_case "Style Bold" "-t 1 'b' --style bold" "\033[1mb\033[0m\n"
+    test_case "Style Underline" "-t 1 'u' --style underline" "\033[4mu\033[0m\n"
+    test_case "Style Hex" "-t 1 'h' --style hex:#FF0000" "\033[38;2;255;0;0mh\033[0m\n"
+    test_case "Style Mixed" "-t 1 'm' --style bold,underline" "\033[1;4mm\033[0m\n"
+    test_case "Template File" "--template $TMP_TPL -t 1" "Line1\nLine2\n"
+    test_case "Template + Format" "--template $TMP_TPL -t 1 -f '>%s<'" ">Line1\nLine2<\n"
+    test_case "Filter non-matching text" "-t 1 'abc' --filter 'z'" ""
+    test_case "Calc Negative Input" "-t 1 '-5' --calc '*2'" "-10\n"
+    test_case "Style Case Combo" "-t 1 'a' --case upper --style bold" "\033[1mA\033[0m\n"
+    test_case "Multi-placeholder Format" "-t 1 'DATA' -f '>>> %s <<< [ %s ]'" ">>> DATA <<< [ DATA ]\n"
+
+    rm -f "$TMP_TPL"
+
     printf -- "----------------------------------------------\n"
     [ $FAILED_TESTS -eq 0 ] && printf "${GREEN}SUCCESS: All tests passed.${NC}\n" || printf "${RED}FAILURE: $FAILED_TESTS tests failed.${NC}\n"
     exit $FAILED_TESTS
@@ -187,7 +221,7 @@ while [ $# -gt 0 ]; do
         -cmd|--command) check_arg "$1" "$2"; COMMAND_STR="$2"; shift ;;
         -r|--random) check_arg "$1" "$2"; USE_RANDOM=1; RANDOM_ITEMS="$2"; shift ;;
         -c|--count) USE_COUNT=1 ;;
-        -o|--output) check_arg "$1" "$2"; OUTPUT="$2"; shift ;;
+        -o|--output) check_arg "$1" "$2"; OUTPUTS="$OUTPUTS '$2'"; shift ;;
         -t|--times) check_arg "$1" "$2"; TIMES="$2"; shift ;;
         -f|--format) check_arg "$1" "$2"; FORMAT="$2"; shift ;;
         -s|--separator) check_arg "$1" "$2"; SEPARATOR="$2"; shift ;;
@@ -204,8 +238,13 @@ while [ $# -gt 0 ]; do
         --precision|--prec) check_arg "$1" "$2"; PRECISION="$2"; shift ;;
         -j|--jitter) check_arg "$1" "$2"; JITTER="$2"; shift ;;
         --case) check_arg "$1" "$2"; CASE_MODE="$2"; shift ;;
-        --color) check_arg "$1" "$2"; COLOR="$2"; shift ;;
+        --color) check_arg "$1" "$2"; STYLE="$2"; shift ;;
+        --style) check_arg "$1" "$2"; STYLE="$2"; shift ;;
         --header) check_arg "$1" "$2"; HEADER="$2"; shift ;;
+        --filter) check_arg "$1" "$2"; FILTER_REGEX="$2"; shift ;;
+        --calc) check_arg "$1" "$2"; CALC_EXPR="$2"; shift ;;
+        --template) check_arg "$1" "$2"; TEMPLATE_FILE="$2"; shift ;;
+        -[0-9]*) TEXT="$1" ;;
         -*) echo "Unknown option: $1"; exit 1 ;;
         *) TEXT="$1" ;;
     esac
@@ -225,12 +264,24 @@ if [ "$SEQ_ACTIVE" -eq 1 ]; then
         count = int(diff / st) + 1;
         print (count < 0 ? 0 : count)
     }')
-    if [ "$TIMES" -eq 0 ] && [ "$CYCLE" -eq 0 ]; then TIMES=$((SEQ_LEN - SKIP)); [ "$TIMES" -le 0 ] && SHOULD_EXIT=1; fi
+    if [ "$TIMES" -eq 0 ] && [ "$CYCLE" -eq 0 ] && [ -z "$FILTER_REGEX" ]; then
+        TIMES=$((SEQ_LEN - SKIP))
+        [ "$TIMES" -le 0 ] && SHOULD_EXIT=1
+    fi
 else
-    if [ "$SKIP" -gt 0 ] && [ "$TIMES" -gt 0 ]; then TIMES=$((TIMES - SKIP)); [ "$TIMES" -le 0 ] && SHOULD_EXIT=1; fi
+    if [ "$SKIP" -gt 0 ] && [ "$TIMES" -gt 0 ] && [ -z "$FILTER_REGEX" ]; then
+        TIMES=$((TIMES - SKIP))
+        [ "$TIMES" -le 0 ] && SHOULD_EXIT=1
+    fi
 fi
 
 if [ "$SHOULD_EXIT" -eq 1 ]; then exit 0; fi
+
+if [ -n "$OUTPUTS" ]; then
+    OUT_CMD="tee $OUTPUTS >/dev/null"
+else
+    OUT_CMD="cat"
+fi
 
 awk -v text="$TEXT" -v limit="$TIMES" -v use_rand="$USE_RANDOM" \
     -v r_list="$RANDOM_ITEMS" -v use_cnt="$USE_COUNT" -v cols="$COLUMNS" \
@@ -240,55 +291,133 @@ awk -v text="$TEXT" -v limit="$TIMES" -v use_rand="$USE_RANDOM" \
     -v pre="$PREFIX_STR" -v suf="$SUFFIX_STR" -v width="$WIDTH" \
     -v cycle="$CYCLE" -v skip="$SKIP" -v seq_len="$SEQ_LEN" \
     -v cmd_str="$COMMAND_STR" -v jitter="$JITTER" -v case_mode="$CASE_MODE" \
-    -v color_name="$COLOR" -v header="$HEADER" \
-'BEGIN {
+    -v style_str="$STYLE" -v header="$HEADER" \
+    -v filter_rx="$FILTER_REGEX" -v calc_op="$CALC_EXPR" \
+    -v tpl_file="$TEMPLATE_FILE" \
+'
+function hex2dec(h, i, x, v) {
+    h = toupper(h); sub(/^#/, "", h); v = 0;
+    for(i=1; i<=length(h); i++) {
+        x = index("0123456789ABCDEF", substr(h, i, 1)) - 1;
+        v = v * 16 + x;
+    }
+    return v;
+}
+BEGIN {
     if (sep == "\\n") sep = "\n"; if (sep == "\\t") sep = "\t";
     if (use_rand || jitter > 0) { srand(); }
     if (use_rand) { r_n = split(r_list, r_arr, ","); }
-    c_s=""; c_e=""
-    if (color_name != "") {
-        if (color_name == "red") c_s="\033[31m"; else if (color_name == "green") c_s="\033[32m";
-        else if (color_name == "yellow") c_s="\033[33m"; else if (color_name == "blue") c_s="\033[34m";
-        else if (color_name == "magenta") c_s="\033[35m"; else if (color_name == "cyan") c_s="\033[36m";
-        c_e="\033[0m"
+
+    if (tpl_file != "") {
+        text = "";
+        while ((getline line < tpl_file) > 0) {
+            text = (text == "" ? "" : text "\n") line
+        }
+        close(tpl_file)
     }
+
+    c_s=""; c_e=""
+    if (style_str != "") {
+        n_st = split(style_str, st_arr, ",");
+        c_s = "\033[";
+        has_st = 0;
+        for (k=1; k<=n_st; k++) {
+            s = st_arr[k];
+            code = "";
+            if (s == "bold") code="1";
+            else if (s == "dim") code="2";
+            else if (s == "italic") code="3";
+            else if (s == "underline") code="4";
+            else if (s == "red") code="31";
+            else if (s == "green") code="32";
+            else if (s == "yellow") code="33";
+            else if (s == "blue") code="34";
+            else if (s == "magenta") code="35";
+            else if (s == "cyan") code="36";
+            else if (s ~ /^hex:/ || s ~ /^#/) {
+                sub(/^hex:/, "", s);
+                v = hex2dec(s);
+                r = int(v / 65536); g = int((v % 65536) / 256); b = int(v % 256);
+                code = "38;2;" r ";" g ";" b;
+            }
+            if (code != "") { if (has_st) c_s = c_s ";"; c_s = c_s code; has_st=1; }
+        }
+        c_s = c_s "m"; c_e = "\033[0m";
+    }
+
     pre = c_s pre; suf = suf c_e;
     if (header != "") { printf "%s\n", header }
+
     do_num_fmt = (!is_c && (pad > 0 || prec >= 0));
     if (do_num_fmt) f_num = "%" (pad > 0 ? "0" pad : "") (prec >= 0 ? "." prec : "") (prec >= 0 ? "f" : "d");
-    is_static = (cmd_str == "" && !use_rand && !s_act && !use_cnt)
-    if (is_static) {
-        val = text
-        if (do_num_fmt) { num_val = val + 0; eps = (num_val >= 0) ? 0.0000000001 : -0.0000000001; val = sprintf(f_num, num_val + eps) }
-        if (case_mode == "upper") val = toupper(val); else if (case_mode == "lower") val = tolower(val);
-        else if (case_mode == "swap") {
-            nv = ""; for(k=1; k<=length(val); k++) { ch = substr(val, k, 1); if (ch ~ /[a-z]/) nv = nv toupper(ch); else if (ch ~ /[A-Z]/) nv = nv tolower(ch); else nv = nv ch }
-            val = nv
-        }
-        if (fmt != "") val = sprintf(fmt, val); val = pre val suf; if (width > 0) val = sprintf("%" width "s", val);
-        sv = val
-    }
+
     i = 0;
+    iter_total = 0;
     while (limit == 0 || i < limit) {
-        if (is_static) { val = sv } else {
-            if (cmd_str != "") { val = ""; while ((cmd_str | getline ln) > 0) { val = (val == "" ? "" : val "\n") ln; }; close(cmd_str); }
-            else if (use_rand) { val = r_arr[int(rand() * r_n) + 1]; }
-            else if (s_act) { idx = i + skip; if (cycle && seq_len > 0) idx = idx % seq_len; cv = s_start + (idx * s_step); val = (is_c) ? sprintf("%c", cv) : cv; }
-            else { val = text; }
-            if (do_num_fmt && cmd_str == "" && !use_rand) { nv = val + 0; eps = (nv >= 0) ? 0.0000000001 : -0.0000000001; val = sprintf(f_num, nv + eps); }
+        should_print = 1;
+
+        if (cmd_str != "") { val = ""; while ((cmd_str | getline ln) > 0) { val = (val == "" ? "" : val "\n") ln; }; close(cmd_str); }
+        else if (use_rand) { val = r_arr[int(rand() * r_n) + 1]; }
+        else if (s_act) {
+            idx = iter_total + skip;
+            if (!cycle && idx >= seq_len && seq_len > 0) break;
+            if (cycle && seq_len > 0) idx = idx % seq_len;
+            cv = s_start + (idx * s_step); val = (is_c) ? sprintf("%c", cv) : cv;
+        }
+        else {
+            val = text;
+            if (limit > 0 && !use_rand && !cycle && iter_total >= limit && filter_rx != "") break;
+        }
+
+        if (calc_op != "" && val ~ /^-?[0-9]+(\.[0-9]+)?$/) {
+            op_char = substr(calc_op, 1, 1);
+            op_val = substr(calc_op, 2) + 0;
+            if (op_char == "+") val = val + op_val;
+            else if (op_char == "-") val = val - op_val;
+            else if (op_char == "*") val = val * op_val;
+            else if (op_char == "/") { if (op_val != 0) val = val / op_val; }
+        }
+
+        if (filter_rx != "" && val !~ filter_rx) {
+            should_print = 0;
+        }
+        else {
+            if (do_num_fmt && cmd_str == "" && !use_rand && val ~ /^-?[0-9]+(\.[0-9]+)?$/) {
+                nv = val + 0; eps = (nv >= 0) ? 0.0000000001 : -0.0000000001; val = sprintf(f_num, nv + eps);
+            }
+
             if (case_mode == "upper") val = toupper(val); else if (case_mode == "lower") val = tolower(val);
             else if (case_mode == "swap") {
                 nv = ""; for(k=1; k<=length(val); k++) { ch = substr(val, k, 1); if (ch ~ /[a-z]/) nv = nv toupper(ch); else if (ch ~ /[A-Z]/) nv = nv tolower(ch); else nv = nv ch }
                 val = nv
             }
-            if (fmt != "") val = sprintf(fmt, val); val = pre val suf; if (width > 0) val = sprintf("%" width "s", val); if (use_cnt) val = (i + 1) ": " val;
+
+            if (fmt != "") {
+                n_fmt = fmt; gsub(/%%/, "\001", n_fmt); pc = 0;
+                for(k=1; k<=length(n_fmt); k++) if(substr(n_fmt, k, 1) == "%") pc++;
+                gsub(/\001/, "%%", n_fmt);
+                if (pc == 1) val = sprintf(fmt, val);
+                else if (pc == 2) val = sprintf(fmt, val, val);
+                else if (pc == 3) val = sprintf(fmt, val, val, val);
+                else if (pc == 4) val = sprintf(fmt, val, val, val, val);
+                else val = sprintf(fmt, val);
+            }
+            val = pre val suf;
+            if (width > 0) val = sprintf("%" width "s", val);
+            if (use_cnt) val = (i + 1) ": " val;
         }
-        if (cols > 1) { printf "%s", val; if ((i + 1) % cols == 0 || (limit > 0 && i + 1 == limit)) printf "\n"; else printf "\t"; }
-        else { printf "%s", val; if (sep == "\n" || sep == "\t") { if (limit == 0 || i + 1 < limit || sep == "\n") printf "%s", sep; } else { printf "%s", sep; } }
-        if (interval > 0 || jitter > 0) {
-            fflush("/dev/stdout"); wt = interval; if (jitter > 0) wt += (rand() * jitter);
-            if (wt > 0) if (system("sleep " wt) != 0) exit 130;
+
+        iter_total++;
+
+        if (should_print) {
+            if (cols > 1) { printf "%s", val; if ((i + 1) % cols == 0 || (limit > 0 && i + 1 == limit)) printf "\n"; else printf "\t"; }
+            else { printf "%s", val; if (sep == "\n" || sep == "\t") { if (limit == 0 || i + 1 < limit || sep == "\n") printf "%s", sep; } else { printf "%s", sep; } }
+
+            if (interval > 0 || jitter > 0) {
+                fflush("/dev/stdout"); wt = interval; if (jitter > 0) wt += (rand() * jitter);
+                if (wt > 0) if (system("sleep " wt) != 0) exit 130;
+            }
+            i++;
         }
-        i++;
     }
-}' > "${OUTPUT:-/dev/stdout}"
+}' | eval "$OUT_CMD"
