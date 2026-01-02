@@ -6,21 +6,50 @@
 
 It behaves similarly to the Unix `yes` command, but:
 
-* Defaults to printing `n`
-* Supports `--times` or `-t` to limit repetitions (infinite by default)
-* Supports `--interval` or `-i` to add delays between outputs
-* Supports `--count` or `-c` to prepend a counter
-* Supports `--output` or `-o` to write output to a file
-* Supports `--random` or `-r` to repeat random strings from a comma-separated list
-* Supports `--command` or `-cmd` to repeatedly execute a shell command and print its output
-* Supports `--seq` to generate numeric (`1:10`) or character (`a:z`) sequences
-* Supports `--step` to set the increment value (supports decimals like `0.5`)
-* Supports `--pad` to zero-pad numeric output (e.g., `--pad 3` becomes `001`)
-* Supports `--precision` to set fixed decimal places for numeric output
-* Supports `--format` or `-f` for custom printf-style output strings
-* Supports `-cols` to arrange output into multiple columns
-* Supports `--separator` or `-s` for custom delimiters between items
-* Supports `--version` or `-v` and `--help` or `-h`
+# Core Logic & Control
+
+## Default Behavior
+
+* Defaults to printing `n` infinitely if no arguments are provided.
+
+## Control Flags
+
+* `--times, -t`: Limits repetitions (e.g., `-t 5` prints 5 times).
+* `--interval, -i`: Adds a fixed delay (in seconds) between each output.
+* `--jitter, -j`: Adds a random delay (0 to N seconds) on top of the interval.
+* `--output, -o`: Writes the output to a specified file instead of the terminal.
+* `--command, -cmd`: Repeatedly executes a shell command and captures its output.
+* `--random, -r`: Picks a random string from a comma-separated list for each iteration.
+* `--skip`: Ignores the first N items of a sequence or repetition.
+* `--version, -v`: Displays the current version information.
+* `--help, -h`: Displays the help manual and usage instructions.
+
+## Sequences & Math
+
+* `--seq`: Generates numeric (e.g., `1:10`) or character (e.g., `a:z`) sequences.
+* `--step`: Sets the increment/decrement value (supports decimals like `0.5`).
+* `--cycle`: Repeats sequences infinitely (requires a limit via `-t`).
+* `--pad`: Zero-pads numeric output to a specific length (e.g., `--pad 3` becomes `001`).
+* `--precision`: Sets fixed decimal places for floating-point numeric output.
+
+## Formatting & Visuals
+
+* `--format, -f`: Applies a custom printf-style string (e.g., `-f "ID-%s"`).
+* `--case`: Transforms text case using `upper`, `lower`, or `swap`.
+* `--color`: Wraps output in ANSI color codes (`red`, `green`, `blue`, `yellow`, `cyan`, `magenta`).
+* `--header`: Prints a single designated line once before the main process begins.
+* `--prefix`: Adds a specific string before every output item.
+* `--suffix`: Adds a specific string after every output item.
+* `--width`: Right-aligns the output to a fixed character width.
+
+## Layout & Parsing
+
+* `-cols`: Arranges the output into N columns using tabbed spacing.
+* `--separator, -s`: Defines custom delimiters between items (defaults to `\n`).
+* `--count, -c`: Prepends an incrementing line counter (e.g., `1: text`).
+* `--`: Stops parsing flags; everything following is treated as literal text.
+* `--flag=value`: Supports standard assignment syntax for all options.
+* `--verify`: Runs an internal suite of self-tests to ensure all logic functions correctly.
 
 For practical examples and ways to use `no`, see the [Use Cases](usecases.md) page.
 
