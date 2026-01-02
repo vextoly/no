@@ -49,7 +49,6 @@ It behaves similarly to the Unix `yes` command, but:
 * `--count, -c`: Prepends an incrementing line counter (e.g., `1: text`).
 * `--template`: Uses content from a file or string as the source text.
 * `--filter`: Outputs only items matching a specified regular expression.
-* `--unique`: Ensures output items are distinct.
 * `--`: Stops parsing flags; everything following is treated as literal text.
 * `--flag=value`: Supports standard assignment syntax for all options.
 * `--verify`: Runs an internal suite of self-tests to ensure all logic functions correctly.
