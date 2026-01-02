@@ -192,5 +192,6 @@ sudo rm /usr/local/bin/no
 - [X] Update [Use Cases](usecases.md) page to latest
 - [X] Add flag `--unique`: Ensures every output of no is unique.
 - [X] Add flag `--trim`: Removes leading/trailing whitespace from output items.
+- [ ] Always reset colours when exiting
 
 [![FreeBSD Banner](https://www.freebsd.org/gifs/fhp_mini.jpg)](https://www.freebsd.org)
