@@ -2,141 +2,243 @@
 
 # Use Cases for `no`
 
-`no` is a modern, high-performance sequence generator and automation utility. While it begins as the logical opposite of the classic Unix `yes` command, its advanced features make it a lightweight alternative to complex loops in shell scripting.
+`no` is a small but extremely flexible output generator and control utility. It started as the conceptual opposite of the Unix `yes` command, but grows into a general-purpose sequence, formatting, and automation tool that replaces many common shell loops and glue scripts.
 
-## Why `no` is a Useful Tool
+---
 
-* **Readability:** Replaces messy `for i in $(seq 1 10); do...done` loops with clean, one-line commands.
-* **Native Logic:** Handles floating-point math, zero-padding, and character sequences (`a:z`) natively, which standard POSIX shells struggle with.
-* **Simulation:** With `--interval` and `--random`, it can simulate human input or unpredictable network traffic for testing.
-* **Formatting:** Built-in `printf` support allows generating structured data (JSON, CSV, SQL) without piping into multiple text processors.
+## Why `no` is Useful
 
-## 1. Sequence Generation (`--seq`, `--step`)
+* **Loop replacement:** Eliminates `for`, `while`, and `seq | while read` patterns with a single command.
+* **Sequence-native:** Numeric, floating-point, negative, and character sequences are first‑class features.
+* **Timing control:** Built-in interval and jitter support without external `sleep` logic.
+* **Formatting pipeline:** `printf` formatting, padding, width alignment, prefixes, suffixes, and column layouts are all handled internally.
+* **Composable:** Filtering, arithmetic, case transforms, styling, and uniqueness can be layered without pipes.
 
-Handles numeric and alphabetical ranges, including reverse counts and custom increments.
+---
 
-**Default Negative Input: Send a stream of "n" to a prompt**
+## 1. Default Behavior & Prompt Automation
 
-```bash
+**Automatically answer "no" to a prompt**
+
+```sh
 no | ./install-script.sh
 ```
 
-**Countdown for a script launch**
+By default, `no` outputs `n` repeatedly until the consumer exits.
 
-```bash
-no --seq 5:1 --interval 1
+**Limit responses**
+
+```sh
+no -t 3
 ```
 
-**Floating point increments**
+---
 
-```bash
+## 2. Sequence Generation (`--seq`, `--step`, `--cycle`)
+
+Generate numeric, floating-point, and character ranges.
+
+**Simple countdown**
+
+```sh
+no --seq 5:1
+```
+
+**Timed countdown**
+
+```sh
+no --seq 5:1 -i 1
+```
+
+**Floating-point sequence**
+
+```sh
 no --seq 0:1 --step 0.25 --precision 2
 ```
 
 Output:
 
 ```
-0.00, 0.25, 0.50, 0.75, 1.00
+0.00
+0.25
+0.50
+0.75
+1.00
 ```
 
-## 2. Advanced Data Formatting (`--format` / `-f`)
+**Alphabet sequence (forward and reverse)**
 
-Wrap output in a template instead of just printing a number.
-
-**Generating dummy filenames or URLs**
-
-```bash
-no --seq 1:3 -f "https://api.example.com/v1/user/%03d"
+```sh
+no --seq a:z
+no --seq Z:A
 ```
 
-**SQL Migration Helper: Generate 100 placeholder entries**
+**Infinite cycling sequence**
 
-```bash
-no --seq 1:100 -f "INSERT INTO users (id, name) VALUES (%d, 'User_%d');"
+```sh
+no --seq 1:3 --cycle -t 10
 ```
 
-**Networking: Generate a list of IP addresses**
+---
 
-```bash
-no --seq 1:254 -f "192.168.1.%s"
+## 3. Formatting & Layout (`--format`, `--pad`, `--width`, `-cols`)
+
+**Zero‑padded IDs**
+
+```sh
+no --seq 1:10 --pad 3
 ```
 
-## 3. Grid & Layout Control (`-cols`)
+**Formatted output using printf-style templates**
 
-Useful for quick terminal dashboards or organizing long lists into readable chunks.
-
-**Organizing the alphabet into columns**
-
-```bash
-no --seq a:z -cols 13
+```sh
+no --seq 1:3 -f "User_%03d"
 ```
 
-**Displaying a large number of IDs**
+**Right-aligned output**
 
-```bash
-no --seq 1:100 --pad 3 -cols 10
+```sh
+no --seq 1:5 --width 4
 ```
 
-## 4. Custom Delimiters (`--separator` / `-s`)
+**Column layout**
 
-Define how items are separated instead of standard one-item-per-line output.
-
-**Creating a comma-separated list**
-
-```bash
-no --seq 101:105 -s ", "
+```sh
+no --seq 1:12 -cols 4
 ```
 
-**JSON Array Construction**
+---
 
-```bash
-no --seq 1:5 -s ", " -f "%d" | sed 's/.*/[&]/'
+## 4. Delimiters & Structured Output (`--separator`)
+
+**Comma-separated list**
+
+```sh
+no --seq 1:5 -s ", "
 ```
 
-Output:
+**Inline CSV row**
 
-```
-[1, 2, 3, 4, 5]
-```
-
-## 5. Automated System Monitoring (`--command` / `-cmd`)
-
-Combine command execution with intervals to create a lightweight "watch" tool.
-
-**CPU Temperature Monitor**
-
-```bash
-no --command "sysctl -n hw.acpi.thermal.tz0.temperature" --interval 1 --count
+```sh
+no --seq 1:4 -s "," -f "%s"
 ```
 
-**Connectivity Heartbeat**
+---
 
-```bash
-no --command "ping -c 1 8.8.8.8 > /dev/null && echo 'Online' || echo 'Offline'" --interval 5
+## 5. Command Execution Loops (`--command`)
+
+Run a command repeatedly with optional timing.
+
+**Lightweight `watch` replacement**
+
+```sh
+no --command "date" -i 1
 ```
 
-## 6. Real-Life Workflow Examples
+**System monitoring**
 
-**Media Management: Create a numbered list of scene folders**
-
-```bash
-no --seq 1:20 -f "Scene_%02d" | xargs mkdir
+```sh
+no --command "sysctl -n hw.ncpu" -i 5 -c
 ```
 
-**Web Testing (Fuzzing)**
+---
 
-```bash
-no --random "200,404,500,403" -i 0.5 -f "curl -X POST -d 'status=%s' localhost:3000/test" | sh
+## 6. Randomized Output & Jitter (`--random`, `--jitter`)
+
+**Random choice generator**
+
+```sh
+no -r "yes,no,maybe" -t 10
 ```
 
-**Stress Testing: Bombard a service with a specific string**
+**Simulated human timing**
 
-```bash
-no "OVERFLOW_TEST_DATA" --times 1000000 > /dev/null
+```sh
+no "ping" -i 1 -j 2
 ```
 
-**Frontend Prototyping: Generate 50 lines of placeholder text**
+---
 
-```bash
-no "Lorem ipsum dolor sit amet." --times 50 --output placeholder.txt
+## 7. Filtering, Arithmetic & Transformation
+
+**Regex filtering**
+
+```sh
+no --seq 1:20 --filter '^[12]$'
 ```
+
+**Inline arithmetic**
+
+```sh
+no --seq 1:5 --calc '*10'
+```
+
+**Case conversion**
+
+```sh
+no "Hello" -t 1 --case upper
+```
+
+**Ensure uniqueness**
+
+```sh
+no -r "a,b,c" --unique -t 3
+```
+
+---
+
+## 8. Styling & Visual Output (`--style`, `--header`)
+
+**Colored or styled output**
+
+```sh
+no "ERROR" -t 1 --style bold,red
+```
+
+**Print a header once**
+
+```sh
+no --seq 1:3 --header "ID" -c
+```
+
+---
+
+## 9. File & Template Workflows (`--output`, `--template`)
+
+**Write directly to a file**
+
+```sh
+no "Line" -t 5 -o output.txt
+```
+
+**Use a template file as input**
+
+```sh
+no --template rows.txt -f "[%s]"
+```
+
+---
+
+## 10. Real-World Automation Examples
+
+**Create numbered directories**
+
+```sh
+no --seq 1:12 -f "Episode_%02d" | xargs mkdir
+```
+
+**Stress-test a consumer**
+
+```sh
+no "TEST_DATA" -t 1000000 > /dev/null
+```
+
+**Generate placeholder content**
+
+```sh
+no "Lorem ipsum" -t 50 -o placeholder.txt
+```
+
+---
+
+`no` is intentionally small, dependency-free, and composable. If you find yourself reaching for `seq`, `yes`, `watch`, `awk`, `sleep`, and `printf` together — `no` can usually replace all of them with a single, readable command.
