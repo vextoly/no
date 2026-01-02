@@ -15,11 +15,11 @@ It behaves similarly to the Unix `yes` command, but:
 * `--times, -t`: Limits repetitions (e.g., `-t 5` prints 5 times).
 * `--interval, -i`: Adds a fixed delay (in seconds) between each output.
 * `--jitter, -j`: Adds a random delay (0 to N seconds) on top of the interval.
-* `--output, -o`: Writes the output to a specified file instead of the terminal.
-* `--command, -cmd`: Repeatedly executes a shell command and captures its output.
-* `--random, -r`: Picks a random string from a comma-separated list for each iteration.
-* `--skip`: Ignores the first N items of a sequence or repetition.
-* `--version, -v`: Displays the current version information.
+* `--output, -o`: Writes the output to one or multiple specified files, streams, or devices.
+* `--command, -cmd`: Repeatedly executes a shell command and captures its output for each iteration.
+* `--random, -r`: Picks a random string from a comma-separated list or template for each iteration.
+* `--skip`: Ignores the first N items of a sequence, repetition, or template.
+* `--version, -v`: Displays metadata or internal state information.
 * `--help, -h`: Displays the help manual and usage instructions.
 
 ## Sequences & Math
@@ -29,22 +29,28 @@ It behaves similarly to the Unix `yes` command, but:
 * `--cycle`: Repeats sequences infinitely (requires a limit via `-t`).
 * `--pad`: Zero-pads numeric output to a specific length (e.g., `--pad 3` becomes `001`).
 * `--precision`: Sets fixed decimal places for floating-point numeric output.
+* `--calc`: Performs arithmetic operations on numeric output (e.g., `'+5'`, `'*2'`).
+* `--repeat`: Repeats each item a specified number of times.
 
 ## Formatting & Visuals
 
 * `--format, -f`: Applies a custom printf-style string (e.g., `-f "ID-%s"`).
 * `--case`: Transforms text case using `upper`, `lower`, or `swap`.
-* `--color`: Wraps output in ANSI color codes (`red`, `green`, `blue`, `yellow`, `cyan`, `magenta`).
+* `--color / --style`: Wraps output in ANSI color codes; supports named colors, hex codes, or style combinations (`bold`, `underline`, `italic`).
 * `--header`: Prints a single designated line once before the main process begins.
 * `--prefix`: Adds a specific string before every output item.
 * `--suffix`: Adds a specific string after every output item.
 * `--width`: Right-aligns the output to a fixed character width.
+* `--trim`: Removes leading/trailing whitespace from output items.
 
 ## Layout & Parsing
 
 * `-cols`: Arranges the output into N columns using tabbed spacing.
 * `--separator, -s`: Defines custom delimiters between items (defaults to `\n`).
 * `--count, -c`: Prepends an incrementing line counter (e.g., `1: text`).
+* `--template`: Uses content from a file or string as the source text.
+* `--filter`: Outputs only items matching a specified regular expression.
+* `--unique`: Ensures output items are distinct.
 * `--`: Stops parsing flags; everything following is treated as literal text.
 * `--flag=value`: Supports standard assignment syntax for all options.
 * `--verify`: Runs an internal suite of self-tests to ensure all logic functions correctly.
