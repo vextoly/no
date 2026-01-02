@@ -187,8 +187,8 @@ sudo rm /usr/local/bin/no
 - [X] Add simple arithmetic operations
 - [X] Add improved ANSI Styling (Bold, underline, hex)
 - [X] Multi-line templates / `--template` support
-- [ ] Update [Use Cases](usecases.md) page to v1.6
-- [ ] Update comparison of `no` to v1.6
+- [ ] Update [Use Cases](usecases.md) page to latest
+- [ ] Update comparison of `no` to latest
 - [ ] Add flag `--unique`: Ensures every output of no is unique.
 - [ ] Add flag `--trim`: Removes leading/trailing whitespace from output items.
 
