@@ -31,7 +31,6 @@ It behaves similarly to the Unix `yes` command, but:
 * `--pad`: Zero-pads numeric output to a specific length (e.g., `--pad 3` becomes `001`).
 * `--precision`: Sets fixed decimal places for floating-point numeric output.
 * `--calc`: Performs arithmetic operations on numeric output (e.g., `'+5'`, `'*2'`).
-* `--repeat`: Repeats each item a specified number of times.
 
 ## Formatting & Visuals
 
