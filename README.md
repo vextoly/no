@@ -41,7 +41,6 @@ It behaves similarly to the Unix `yes` command, but:
 * `--prefix`: Adds a specific string before every output item.
 * `--suffix`: Adds a specific string after every output item.
 * `--width`: Right-aligns the output to a fixed character width.
-* `--trim`: Removes leading/trailing whitespace from output items.
 
 ## Layout & Parsing
 
