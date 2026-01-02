@@ -50,7 +50,6 @@ It behaves similarly to the Unix `yes` command, but:
 * `--template`: Uses content from a file or string as the source text.
 * `--filter`: Outputs only items matching a specified regular expression.
 * `--`: Stops parsing flags; everything following is treated as literal text.
-* `--flag=value`: Supports standard assignment syntax for all options.
 * `--verify`: Runs an internal suite of self-tests to ensure all logic functions correctly.
 
 For practical examples and ways to use `no`, see the [Use Cases](usecases.md) page.
@@ -190,5 +189,6 @@ sudo rm /usr/local/bin/no
 - [X] Multi-line templates / `--template` support
 - [ ] Update [Use Cases](usecases.md) page to v1.6
 - [ ] Update comparison of `no` to v1.6
+- [ ] Add flag `--unique`
 
 [![FreeBSD Powered Button](https://www.freebsd.org/gifs/power-button.gif)](https://www.freebsd.org)
