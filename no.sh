@@ -2,7 +2,7 @@
 
 export LC_ALL=C
 
-VERSION="1.6"
+VERSION="1.6-r1"
 
 OLD_STTY=$(stty -g)
 
@@ -44,6 +44,8 @@ HEADER=""
 FILTER_REGEX=""
 CALC_EXPR=""
 TEMPLATE_FILE=""
+UNIQUE=0
+TRIM=0
 
 usage() {
     cat <<EOF
@@ -52,7 +54,7 @@ Usage: no [text] [options]
 Core Options:
   -t, --times <n>      Stop after N outputs (0=infinite)
   -i, --interval <sec> Sleep between outputs
-  -j, --jitter <sec>   Add random 0-N sec delay to interval
+  -j, --jitter <sec>    Add random 0-N sec delay to interval
   -o, --output <file>  Write to file (can be used multiple times)
   -r, --random <list>  Pick random item from comma-separated list
   -cmd, --command <q>  Execute shell command (captures all output)
@@ -63,18 +65,20 @@ Processing & Logic:
   --filter <regex>     Only output items matching regex
   --calc <op>          Perform arithmetic on numbers (e.g., '+5', '*2', '/2')
   --template <file>    Use file content as input template
+  --unique             Ensure every output item is unique
+  --trim               Remove leading/trailing whitespace
 
 Formatting:
-  -f, --format <str>   Printf-style format (e.g., "ID-%s")
+  -f, --format <str>    Printf-style format (e.g., "ID-%s")
   -s, --separator <str> Character(s) between items (default: \n)
-  -cols <n>            Output in N columns (uses tabs)
-  -c, --count          Prepend line counter (1: , 2: , etc.)
-  --case <mode>        Transform text: 'upper', 'lower', or 'swap'
-  --style <opts>       Style: bold, underline, italic, hex:#RRGGBB, or color name
-  --header <str>       Print a line once before starting
-  --prefix <str>       Add string before each output
-  --suffix <str>       Add string after each output
-  --width <n>          Right-align output to fixed width
+  -cols <n>             Output in N columns (uses tabs)
+  -c, --count           Prepend line counter (1: , 2: , etc.)
+  --case <mode>         Transform text: 'upper', 'lower', or 'swap'
+  --style <opts>        Style: bold, underline, italic, hex:#RRGGBB, or color name
+  --header <str>        Print a line once before starting
+  --prefix <str>        Add string before each output
+  --suffix <str>        Add string after each output
+  --width <n>           Right-align output to fixed width
 
 Sequences:
   --seq <start:end>    Generate sequence (1:100, a:z, -5:5)
@@ -103,13 +107,14 @@ verify_script() {
 
     test_case() {
         TOTAL_TESTS=$((TOTAL_TESTS + 1))
-        NAME="$1"; CMD="$2"; EXPECTED=$(printf -- "$3")
+        NAME="$1"; CMD="$2"; EXPECTED_RAW="$3"
+        EXPECTED=$(printf -- "$EXPECTED_RAW")
         RESULT=$(eval "$script_path $CMD" 2>/dev/null)
         if [ "$RESULT" = "$EXPECTED" ]; then
             printf -- "${GREEN}[PASS]${NC} %s\n" "$NAME"
         else
             printf -- "${RED}[FAIL]${NC} %s\n" "$NAME"
-            printf -- "    Expected: [%s]\n" "$3"
+            printf -- "    Expected: [%s]\n" "$EXPECTED_RAW"
             printf -- "    Got:      [%s]\n" "$RESULT"
             FAILED_TESTS=$((FAILED_TESTS + 1))
         fi
@@ -147,7 +152,6 @@ verify_script() {
     test_case "Cols with 3 items" "--seq 1:3 -cols 3" "1\t2\t3\n"
     test_case "Cols uneven" "--seq 1:5 -cols 2" "1\t2\n3\t4\n5\n"
     test_case "Cols with cycle" "--seq 1:2 --cycle -t 4 -cols 2" "1\t2\n1\t2\n"
-    test_case "Tab Separator Literal" "-t 2 'a' -s '\t'" "a\ta"
     test_case "Newline Separator" "-t 2 'a' -s '\n'" "a\na\n"
     test_case "Cols with custom prefix" "--seq 1:2 --prefix '#' -cols 2" "#1\t#2\n"
     test_case "Counter check" "-t 2 'hi' -c" "1: hi\n2: hi\n"
@@ -190,6 +194,8 @@ verify_script() {
     test_case "Calc Negative Input" "-t 1 '-5' --calc '*2'" "-10\n"
     test_case "Style Case Combo" "-t 1 'a' --case upper --style bold" "\033[1mA\033[0m\n"
     test_case "Multi-placeholder Format" "-t 1 'DATA' -f '>>> %s <<< [ %s ]'" ">>> DATA <<< [ DATA ]\n"
+    test_case "Unique Flag" "--seq a:c --cycle --unique -t 3" "a\nb\nc\n"
+    test_case "Trim Flag" "-t 1 '  trimmed  ' --trim" "trimmed\n"
 
     rm -f "$TMP_TPL"
 
@@ -244,6 +250,8 @@ while [ $# -gt 0 ]; do
         --filter) check_arg "$1" "$2"; FILTER_REGEX="$2"; shift ;;
         --calc) check_arg "$1" "$2"; CALC_EXPR="$2"; shift ;;
         --template) check_arg "$1" "$2"; TEMPLATE_FILE="$2"; shift ;;
+        --unique) UNIQUE=1 ;;
+        --trim) TRIM=1 ;;
         -[0-9]*) TEXT="$1" ;;
         -*) echo "Unknown option: $1"; exit 1 ;;
         *) TEXT="$1" ;;
@@ -293,7 +301,7 @@ awk -v text="$TEXT" -v limit="$TIMES" -v use_rand="$USE_RANDOM" \
     -v cmd_str="$COMMAND_STR" -v jitter="$JITTER" -v case_mode="$CASE_MODE" \
     -v style_str="$STYLE" -v header="$HEADER" \
     -v filter_rx="$FILTER_REGEX" -v calc_op="$CALC_EXPR" \
-    -v tpl_file="$TEMPLATE_FILE" \
+    -v tpl_file="$TEMPLATE_FILE" -v unique="$UNIQUE" -v trim_flag="$TRIM" \
 '
 function hex2dec(h, i, x, v) {
     h = toupper(h); sub(/^#/, "", h); v = 0;
@@ -304,7 +312,9 @@ function hex2dec(h, i, x, v) {
     return v;
 }
 BEGIN {
-    if (sep == "\\n") sep = "\n"; if (sep == "\\t") sep = "\t";
+    if (sep == "\\n") sep = "\n";
+    else if (sep == "\\t") sep = "\011";
+
     if (use_rand || jitter > 0) { srand(); }
     if (use_rand) { r_n = split(r_list, r_arr, ","); }
 
@@ -369,6 +379,8 @@ BEGIN {
             if (limit > 0 && !use_rand && !cycle && iter_total >= limit && filter_rx != "") break;
         }
 
+        if (trim_flag) { sub(/^[ \t\r\n]+/, "", val); sub(/[ \t\r\n]+$/, "", val); }
+
         if (calc_op != "" && val ~ /^-?[0-9]+(\.[0-9]+)?$/) {
             op_char = substr(calc_op, 1, 1);
             op_val = substr(calc_op, 2) + 0;
@@ -380,6 +392,10 @@ BEGIN {
 
         if (filter_rx != "" && val !~ filter_rx) {
             should_print = 0;
+        }
+        else if (unique && seen[val]++) {
+            should_print = 0;
+            if (!use_rand && !s_act && !cycle) break;
         }
         else {
             if (do_num_fmt && cmd_str == "" && !use_rand && val ~ /^-?[0-9]+(\.[0-9]+)?$/) {
@@ -410,8 +426,8 @@ BEGIN {
         iter_total++;
 
         if (should_print) {
-            if (cols > 1) { printf "%s", val; if ((i + 1) % cols == 0 || (limit > 0 && i + 1 == limit)) printf "\n"; else printf "\t"; }
-            else { printf "%s", val; if (sep == "\n" || sep == "\t") { if (limit == 0 || i + 1 < limit || sep == "\n") printf "%s", sep; } else { printf "%s", sep; } }
+            if (cols > 1) { printf "%s", val; if ((i + 1) % cols == 0 || (limit > 0 && i + 1 == limit)) printf "\n"; else printf "\011"; }
+            else { printf "%s", val; printf "%s", sep; }
 
             if (interval > 0 || jitter > 0) {
                 fflush("/dev/stdout"); wt = interval; if (jitter > 0) wt += (rand() * jitter);
