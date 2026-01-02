@@ -1,3 +1,5 @@
+~If you found this project helpful or enjoyed using it, please consider giving it a star! It takes just a second and helps others discover the work!
+
 # no
 
 `no` is the opposite of `yes`.
