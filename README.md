@@ -1,5 +1,3 @@
-[![IDC License](https://img.shields.io/badge/License-IDC-blue.svg)](LICENSE)
-
 <sub>If you found this project helpful or enjoyed using it, please consider giving it a star!</sub>
 
 # no
